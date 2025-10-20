@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/inventory_provider.dart';
 import '../screens/barcode_scanner_screen.dart';
+import '../screens/date_scanner_screen.dart';
 
 class AddProductWidget extends StatefulWidget {
   const AddProductWidget({super.key});
@@ -37,6 +38,30 @@ class _AddProductWidgetState extends State<AddProductWidget> {
       setState(() {
         _selectedDate = picked;
       });
+    }
+  }
+
+  Future<void> _scanExpiryDate() async {
+    final DateTime? scannedDate = await Navigator.push<DateTime>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DateScannerScreen(),
+      ),
+    );
+
+    if (scannedDate != null && mounted) {
+      setState(() {
+        _selectedDate = scannedDate;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Data riconosciuta: ${DateFormat('dd/MM/yyyy').format(scannedDate)}',
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -302,37 +327,55 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                       const SizedBox(height: 12),
 
                       // Data scadenza
-                      InkWell(
-                        onTap: () => _selectDate(context),
-                        child: InputDecorator(
-                          decoration: InputDecoration(
-                            labelText: 'Data scadenza',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _selectedDate == null
-                                    ? 'Seleziona data'
-                                    : DateFormat('dd/MM/yyyy')
-                                        .format(_selectedDate!),
-                                style: TextStyle(
-                                  color: _selectedDate == null
-                                      ? Colors.grey[600]
-                                      : Colors.black87,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              onTap: () => _selectDate(context),
+                              child: InputDecorator(
+                                decoration: InputDecoration(
+                                  labelText: 'Data scadenza',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _selectedDate == null
+                                          ? 'Seleziona data'
+                                          : DateFormat('dd/MM/yyyy')
+                                              .format(_selectedDate!),
+                                      style: TextStyle(
+                                        color: _selectedDate == null
+                                            ? Colors.grey[600]
+                                            : Colors.black87,
+                                      ),
+                                    ),
+                                    const Icon(Icons.calendar_today, size: 20),
+                                  ],
                                 ),
                               ),
-                              const Icon(Icons.calendar_today, size: 20),
-                            ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(width: 8),
+                          // Pulsante scan data
+                          IconButton(
+                            onPressed: _scanExpiryDate,
+                            icon: const Icon(Icons.document_scanner),
+                            tooltip: 'Scansiona data',
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.blue[50],
+                              foregroundColor: Colors.blue,
+                            ),
+                          ),
+                        ],
                       ),
 
                       const SizedBox(height: 16),
