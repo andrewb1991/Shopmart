@@ -15,16 +15,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
-    // Carica l'inventario all'avvio
-    Future.microtask(() async {
+    // Carica l'inventario all'avvio con un delay per evitare crash
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        try {
-          await Provider.of<InventoryProvider>(context, listen: false).loadInventory();
-        } catch (e) {
-          debugPrint('⚠️ Errore durante il caricamento iniziale dell\'inventario: $e');
-        }
+        _loadInventorySafely();
       }
     });
+  }
+
+  Future<void> _loadInventorySafely() async {
+    try {
+      await Provider.of<InventoryProvider>(context, listen: false).loadInventory();
+    } catch (e) {
+      debugPrint('⚠️ Errore durante il caricamento iniziale dell\'inventario: $e');
+    }
   }
 
   Color _getStatusColor(ProductStatus status) {

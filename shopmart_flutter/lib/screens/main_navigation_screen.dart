@@ -13,23 +13,20 @@ class MainNavigationScreen extends StatefulWidget {
 class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _currentIndex = 0;
 
-  Widget _getScreen(int index) {
-    switch (index) {
-      case 0:
-        return const InventoryScreen();
-      case 1:
-        return const AddProductScreen();
-      case 2:
-        return const SettingsScreen();
-      default:
-        return const InventoryScreen();
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    Widget currentScreen;
+
+    if (_currentIndex == 0) {
+      currentScreen = const InventoryScreen();
+    } else if (_currentIndex == 1) {
+      currentScreen = const AddProductScreen();
+    } else {
+      currentScreen = const SettingsScreen();
+    }
+
     return Scaffold(
-      body: _getScreen(_currentIndex),
+      body: currentScreen,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -39,10 +36,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         },
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,
-        selectedFontSize: 12,
-        unselectedFontSize: 12,
+        selectedFontSize: 12.0,
+        unselectedFontSize: 12.0,
         type: BottomNavigationBarType.fixed,
-        items: const [
+        items: <BottomNavigationBarItem>[
           BottomNavigationBarItem(
             icon: Icon(Icons.inventory_2),
             label: 'Magazzino',
