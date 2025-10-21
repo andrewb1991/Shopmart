@@ -4,7 +4,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/inventory_provider.dart';
-import 'screens/home_screen.dart';
+import 'screens/main_navigation_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,13 +12,25 @@ Future<void> main() async {
   // Carica variabili di ambiente
   try {
     await dotenv.load(fileName: '.env');
+    debugPrint('✅ .env loaded successfully');
   } catch (e) {
     // Se non trova il file .env, continua comunque
-    debugPrint('Warning: .env file not found, using default values');
+    debugPrint('⚠️ Warning: .env file not found, using default values - $e');
   }
 
   // Inizializza la localizzazione italiana per le date
-  await initializeDateFormatting('it_IT', null);
+  try {
+    await initializeDateFormatting('it_IT', null);
+    debugPrint('✅ Date formatting initialized');
+  } catch (e) {
+    debugPrint('⚠️ Warning: Date formatting initialization failed - $e');
+  }
+
+  // Cattura errori non gestiti
+  FlutterError.onError = (FlutterErrorDetails details) {
+    debugPrint('❌ Flutter Error: ${details.exception}');
+    debugPrint('Stack trace: ${details.stack}');
+  };
 
   runApp(const MyApp());
 }
@@ -54,7 +66,7 @@ class MyApp extends StatelessWidget {
             elevation: 0,
           ),
         ),
-        home: const HomeScreen(),
+        home: const MainNavigationScreen(),
       ),
     );
   }

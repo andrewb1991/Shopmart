@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import '../models/product.dart';
 import '../models/inventory_item.dart';
 import '../services/api_service.dart';
@@ -26,8 +27,11 @@ class InventoryProvider with ChangeNotifier {
       _inventory = await _apiService.getInventory();
       // Ordina per data di scadenza (prima i prodotti in scadenza)
       _inventory.sort((a, b) => a.daysLeft.compareTo(b.daysLeft));
+      debugPrint('✅ Inventario caricato: ${_inventory.length} prodotti');
     } catch (e) {
       _errorMessage = 'Errore nel caricamento dell\'inventario';
+      _inventory = []; // Assicurati che la lista sia vuota in caso di errore
+      debugPrint('⚠️ Errore caricamento inventario: $e');
     } finally {
       _isLoading = false;
       notifyListeners();
