@@ -3,10 +3,116 @@ const express = require('express');
 const axios = require('axios');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const { translate } = require('@vitalets/google-translate-api');
 require('dotenv').config();
 
 // Funzione per generare UUID
 const uuidv4 = () => crypto.randomUUID();
+
+// Dizionario statico per ingredienti e termini comuni
+const translationDictionary = {
+  // Ingredienti comuni
+  'prosciutto': 'prosciutto',
+  'ham': 'prosciutto',
+  'pancetta': 'pancetta',
+  'proscuitto': 'prosciutto',
+  'biscuit type crackers': 'cracker tipo biscotto',
+  'fig jam': 'marmellata di fichi',
+  'figs': 'fichi',
+  'brie cheese': 'formaggio brie',
+  'muffins': 'muffin',
+  'pear': 'pera',
+  'creamy goat cheese': 'formaggio caprino cremoso',
+  'basil': 'basilico',
+  'thyme': 'timo',
+  'juice of lemon': 'succo di limone',
+  'chicken thighs': 'cosce di pollo',
+  'shells': 'conchiglie',
+  'ricotta cheese': 'ricotta',
+  'egg': 'uovo',
+  'tomato sauce': 'salsa di pomodoro',
+  'several basil leaves': 'diverse foglie di basilico',
+  'sized cantaloupe': 'melone',
+  'chicken stock': 'brodo di pollo',
+  'onion': 'cipolla',
+  'mushrooms': 'funghi',
+  'dijon mustard': 'senape di digione',
+  'puff pastry': 'pasta sfoglia',
+  'egg yolks': 'tuorli d\'uovo',
+  'pork cutlets': 'cotolette di maiale',
+  'sage leaves': 'foglie di salvia',
+  'butter': 'burro',
+  'lemon juice': 'succo di limone',
+  'toasty bread': 'pane tostato',
+  'garlic': 'aglio',
+  'radicchio': 'radicchio',
+  'endive': 'indivia',
+  'olive oil': 'olio d\'oliva',
+  'pistachio nuts': 'pistacchi',
+  'honey': 'miele',
+  'white peppercorns cracked': 'pepe bianco macinato',
+  'peppercorns cracked': 'pepe macinato',
+  'shaved prosciutto': 'prosciutto a fette',
+  'small jar': 'barattolo piccolo',
+  'ounces': 'once',
+  'ounce': 'oncia',
+  // Titoli ricette comuni
+  'goat cheese, fig and proscuitto crostini': 'crostini di formaggio di capra, fichi e prosciutto',
+  'grilled figs with brie and prosciutto': 'fichi grigliati con brie e prosciutto',
+  'broiled pear and prosciutto toasts': 'toast con pere e prosciutto alla griglia',
+  'chicken thighs wrapped in prosciutto': 'cosce di pollo avvolte nel prosciutto',
+  'pasta shells with ricotta cheese stuffing': 'conchiglie di pasta con ripieno di ricotta',
+  'cantaloupe soup with crispy ham and basil': 'zuppa di melone con prosciutto croccante e basilico',
+  'easy beef wellington': 'manzo wellington facile',
+  'mouthwatering grilled saltimbocca': 'saltimbocca alla griglia deliziosi',
+  'savory radicchio and prosciutto crostini topped with sweet syrupy sapa': 'crostini salati con radicchio e prosciutto conditi con sapa dolce sciroppata',
+  'roasted endive salad with prosciutto, figs and pistachios': 'insalata di indivia arrosto con prosciutto, fichi e pistacchi'
+};
+
+// Cache per le traduzioni
+const translationCache = new Map();
+
+// Funzione per tradurre testo in italiano con dizionario statico e cache
+async function translateToItalian(text) {
+  if (!text) return text;
+
+  const lowerText = text.toLowerCase().trim();
+
+  // 1. Controlla dizionario statico
+  if (translationDictionary[lowerText]) {
+    return translationDictionary[lowerText];
+  }
+
+  // 2. Controlla cache
+  if (translationCache.has(lowerText)) {
+    return translationCache.get(lowerText);
+  }
+
+  // 3. Usa Google Translate come fallback (con gestione errori)
+  try {
+    // Aggiungi un piccolo delay per evitare rate limiting
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    const result = await translate(text, { to: 'it' });
+    const translated = result.text;
+
+    // Salva in cache
+    translationCache.set(lowerText, translated);
+
+    return translated;
+  } catch (error) {
+    // In caso di errore, ritorna testo originale
+    return text;
+  }
+}
+
+// Funzione per tradurre un array di testi
+async function translateArray(textArray) {
+  const translations = await Promise.all(
+    textArray.map(text => translateToItalian(text))
+  );
+  return translations;
+}
 
 const app = express();
 
@@ -386,7 +492,7 @@ app.post('/api/recipes/suggest', async (req, res) => {
       }
     );
 
-    // Estrai le ricette
+    // Estrai le ricette (senza traduzione)
     const recipes = response.data.map(recipe => ({
       id: recipe.id,
       title: recipe.title,
@@ -436,13 +542,15 @@ app.get('/api/recipes/:id', async (req, res) => {
       {
         params: {
           apiKey: SPOONACULAR_API_KEY,
-          includeNutrition: false
+          includeNutrition: false,
+          language: 'it'
         }
       }
     );
 
     const recipe = response.data;
 
+    // Restituisci i dati senza traduzione
     const recipeDetails = {
       id: recipe.id,
       title: recipe.title,

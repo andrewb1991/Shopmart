@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 import 'dart:ui';
 import '../providers/inventory_provider.dart';
 import '../models/inventory_item.dart';
+import '../services/api_service.dart';
+import 'recipes_screen.dart';
 
 class ExpiringScreen extends StatefulWidget {
   const ExpiringScreen({super.key});
@@ -657,10 +659,13 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
 
           return Column(
             children: [
-              // Barra di ricerca con filtro
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 116, 16, 8),
-                child: Row(
+              // Barra di ricerca con filtro (FISSA)
+              SafeArea(
+                bottom: false,
+                child: Container(
+                  color: const Color(0xFFF5F5F7),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Row(
                   children: [
                     // Pulsante filtro
                     Container(
@@ -839,12 +844,14 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                       ),
                     ),
                   ],
+                  ),
                 ),
               ),
 
-              // Pulsante "Genera Ricetta" o "Crea ricetta"
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              // Pulsante "Genera Ricetta" o "Crea ricetta" (FISSO)
+              Container(
+                color: const Color(0xFFF5F5F7),
+                padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
                   child: BackdropFilter(
@@ -1027,7 +1034,7 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                         itemCount: filteredInventory.length,
                         itemBuilder: (context, index) {
                           return _buildInventoryItem(filteredInventory[index]);
@@ -1059,13 +1066,82 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
       return;
     }
 
-    // TODO: Implementare chiamata API e navigazione
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Generando ricette con: ${selectedProducts.join(", ")}'),
-        backgroundColor: Colors.green,
+    // Mostra loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(
+                'Cercando ricette...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[800],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
+
+    try {
+      final apiService = ApiService();
+      final recipes = await apiService.suggestRecipes(selectedProducts);
+
+      if (!mounted) return;
+
+      Navigator.pop(context); // Chiudi loading
+
+      if (recipes.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Nessuna ricetta trovata con questi ingredienti'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Reset selezione
+      setState(() {
+        _isSelectionMode = false;
+        _selectedProductIds.clear();
+      });
+
+      // Naviga alla schermata ricette
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => RecipesScreen(
+            recipes: recipes,
+            selectedIngredients: selectedProducts,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      Navigator.pop(context); // Chiudi loading
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Errore durante la ricerca: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Widget _buildMenuItemGlass({

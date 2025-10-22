@@ -474,7 +474,7 @@ class RecipesScreen extends StatelessWidget {
                               width: double.infinity,
                               child: TextButton(
                                 onPressed: () {
-                                  Navigator.pop(context);
+                                  // NON chiudere il bottom sheet qui, verrà chiuso dopo aver caricato i dati
                                   _loadFullRecipeDetails(context, recipe.id);
                                 },
                                 style: TextButton.styleFrom(
@@ -520,15 +520,36 @@ class RecipesScreen extends StatelessWidget {
 
     try {
       final apiService = ApiService();
+      print('🔍 Caricamento dettagli ricetta ID: $recipeId');
       final recipeDetail = await apiService.getRecipeDetails(recipeId);
+      print('✓ Dettagli ricevuti: ${recipeDetail?.title ?? "NULL"}');
 
-      if (!context.mounted) return;
+      if (!context.mounted) {
+        print('❌ Context non più montato');
+        return;
+      }
 
-      Navigator.pop(context); // Chiudi loading
+      // Chiudi il loading dialog
+      Navigator.pop(context);
 
       if (recipeDetail != null) {
+        print('📱 Chiudo bottom sheet iniziale e mostro quello completo');
+
+        // Chiudi il bottom sheet iniziale
+        Navigator.pop(context);
+
+        // Attendi un frame prima di aprire il nuovo bottom sheet
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (!context.mounted) {
+          print('❌ Context non più montato dopo delay');
+          return;
+        }
+
+        print('📱 Apro bottom sheet con dettagli completi');
         _showFullRecipeDetails(context, recipeDetail);
       } else {
+        print('❌ RecipeDetail è null');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Impossibile caricare i dettagli della ricetta'),
@@ -537,6 +558,7 @@ class RecipesScreen extends StatelessWidget {
         );
       }
     } catch (e) {
+      print('❌ Errore durante caricamento: $e');
       if (!context.mounted) return;
       Navigator.pop(context); // Chiudi loading
       ScaffoldMessenger.of(context).showSnackBar(

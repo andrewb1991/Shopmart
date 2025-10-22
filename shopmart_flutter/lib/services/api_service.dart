@@ -188,20 +188,31 @@ class ApiService {
   // Ottieni dettagli ricetta
   Future<RecipeDetail?> getRecipeDetails(int recipeId) async {
     try {
+      print('📡 Chiamata API: $baseUrl/recipes/$recipeId');
       final response = await http.get(
         Uri.parse('$baseUrl/recipes/$recipeId'),
         headers: {'Content-Type': 'application/json'},
       );
 
+      print('📡 Status code: ${response.statusCode}');
+
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
+        print('📡 Data success: ${data['success']}');
+        print('📡 Recipe null? ${data['recipe'] == null}');
+
         if (data['success'] == true && data['recipe'] != null) {
-          return RecipeDetail.fromJson(data['recipe']);
+          print('📡 Parsing JSON...');
+          final recipeDetail = RecipeDetail.fromJson(data['recipe']);
+          print('📡 Parsing completato: ${recipeDetail.title}');
+          return recipeDetail;
         }
       }
+      print('❌ Nessun dato valido');
       return null;
-    } catch (e) {
-      print('Errore durante il caricamento dei dettagli della ricetta: $e');
+    } catch (e, stackTrace) {
+      print('❌ Errore durante il caricamento dei dettagli della ricetta: $e');
+      print('❌ Stack trace: $stackTrace');
       return null;
     }
   }

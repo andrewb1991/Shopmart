@@ -639,10 +639,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
           return Column(
             children: [
-              // Barra di ricerca con filtro
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 116, 16, 8),
-                child: Row(
+              // Barra di ricerca con filtro (FISSA)
+              SafeArea(
+                bottom: false,
+                child: Container(
+                  color: const Color(0xFFF5F5F7),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                  child: Row(
                   children: [
                     // Pulsante filtro
                     Container(
@@ -821,6 +824,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ),
                     ),
                   ],
+                  ),
                 ),
               ),
 
@@ -849,7 +853,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 4, 16, 100),
                         itemCount: filteredInventory.length,
                         itemBuilder: (context, index) {
                           return _buildInventoryItem(filteredInventory[index]);
