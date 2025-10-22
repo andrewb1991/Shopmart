@@ -5,24 +5,26 @@ import 'dart:ui';
 import '../providers/inventory_provider.dart';
 import '../models/inventory_item.dart';
 
-class InventoryScreen extends StatefulWidget {
-  const InventoryScreen({super.key});
+class ExpiringScreen extends StatefulWidget {
+  const ExpiringScreen({super.key});
 
   @override
-  State<InventoryScreen> createState() => _InventoryScreenState();
+  State<ExpiringScreen> createState() => _ExpiringScreenState();
 }
 
 enum SortType { nameAsc, nameDesc, brandAsc, brandDesc, expiryAsc, expiryDesc, quantityAsc, quantityDesc }
 
-class _InventoryScreenState extends State<InventoryScreen> {
+class _ExpiringScreenState extends State<ExpiringScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   SortType _currentSort = SortType.expiryAsc; // Default: ordina per scadenza
+  bool _isSelectionMode = false;
+  Set<String> _selectedProductIds = {};
 
   @override
   void initState() {
     super.initState();
-    // Carica l'inventario all'avvio con un delay per evitare crash
+    // Carica l'inventario all'avvio
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _loadInventorySafely();
@@ -40,10 +42,20 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       await Provider.of<InventoryProvider>(context, listen: false).loadInventory();
     } catch (e) {
-      debugPrint('⚠️ Errore durante il caricamento iniziale dell\'inventario: $e');
+      debugPrint('⚠️ Errore durante il caricamento inventario: $e');
     }
   }
 
+  // Filtra solo i prodotti in scadenza (URGENTE, ATTENZIONE, SCADUTO)
+  List<InventoryItem> _getExpiringProducts(List<InventoryItem> inventory) {
+    return inventory.where((item) {
+      return item.status == ProductStatus.scaduto ||
+          item.status == ProductStatus.urgente ||
+          item.status == ProductStatus.attenzione;
+    }).toList();
+  }
+
+  // Filtra per nome e brand
   List<InventoryItem> _filterInventory(List<InventoryItem> inventory) {
     if (_searchQuery.isEmpty) {
       return inventory;
@@ -564,7 +576,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: AppBar(
               title: const Text(
-                'In casa',
+                'In scadenza',
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 28,
@@ -603,19 +615,28 @@ class _InventoryScreenState extends State<InventoryScreen> {
             );
           }
 
-          if (provider.inventory.isEmpty) {
+          // Filtra prima per prodotti in scadenza
+          final expiringProducts = _getExpiringProducts(provider.inventory);
+
+          // Applica ordinamento
+          final sortedInventory = _sortInventory(expiringProducts);
+
+          // Poi applica il filtro di ricerca
+          final filteredInventory = _filterInventory(sortedInventory);
+
+          if (expiringProducts.isEmpty) {
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    Icons.inventory_2_outlined,
+                    Icons.check_circle_outline,
                     size: 64,
-                    color: Colors.grey,
+                    color: Colors.green,
                   ),
                   SizedBox(height: 16),
                   Text(
-                    'Nessun prodotto nel magazzino',
+                    'Nessun prodotto in scadenza',
                     style: TextStyle(
                       fontSize: 18,
                       color: Colors.grey,
@@ -623,7 +644,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'Inizia ad aggiungere prodotti!',
+                    'Tutto sotto controllo! 🎉',
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.grey,
@@ -633,9 +654,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
             );
           }
-
-          final sortedInventory = _sortInventory(provider.inventory);
-          final filteredInventory = _filterInventory(sortedInventory);
 
           return Column(
             children: [
@@ -682,81 +700,81 @@ class _InventoryScreenState extends State<InventoryScreen> {
                                   _currentSort = value;
                                 });
                               },
-                                itemBuilder: (context) => [
-                                  PopupMenuItem(
-                                    value: SortType.nameAsc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.sort_by_alpha,
-                                      text: 'Nome (A-Z)',
-                                      isSelected: _currentSort == SortType.nameAsc,
-                                    ),
+                              itemBuilder: (context) => [
+                                PopupMenuItem(
+                                  value: SortType.nameAsc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.sort_by_alpha,
+                                    text: 'Nome (A-Z)',
+                                    isSelected: _currentSort == SortType.nameAsc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.nameDesc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.sort_by_alpha,
-                                      text: 'Nome (Z-A)',
-                                      isSelected: _currentSort == SortType.nameDesc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.nameDesc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.sort_by_alpha,
+                                    text: 'Nome (Z-A)',
+                                    isSelected: _currentSort == SortType.nameDesc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.brandAsc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.business,
-                                      text: 'Marca (A-Z)',
-                                      isSelected: _currentSort == SortType.brandAsc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.brandAsc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.business,
+                                    text: 'Marca (A-Z)',
+                                    isSelected: _currentSort == SortType.brandAsc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.brandDesc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.business,
-                                      text: 'Marca (Z-A)',
-                                      isSelected: _currentSort == SortType.brandDesc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.brandDesc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.business,
+                                    text: 'Marca (Z-A)',
+                                    isSelected: _currentSort == SortType.brandDesc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.expiryAsc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.calendar_today,
-                                      text: 'Scadenza (prossima)',
-                                      isSelected: _currentSort == SortType.expiryAsc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.expiryAsc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.calendar_today,
+                                    text: 'Scadenza (prossima)',
+                                    isSelected: _currentSort == SortType.expiryAsc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.expiryDesc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.calendar_today,
-                                      text: 'Scadenza (lontana)',
-                                      isSelected: _currentSort == SortType.expiryDesc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.expiryDesc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.calendar_today,
+                                    text: 'Scadenza (lontana)',
+                                    isSelected: _currentSort == SortType.expiryDesc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.quantityAsc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.numbers,
-                                      text: 'Quantità (crescente)',
-                                      isSelected: _currentSort == SortType.quantityAsc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.quantityAsc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.numbers,
+                                    text: 'Quantità (crescente)',
+                                    isSelected: _currentSort == SortType.quantityAsc,
                                   ),
-                                  PopupMenuItem(
-                                    value: SortType.quantityDesc,
-                                    padding: EdgeInsets.zero,
-                                    child: _buildMenuItemGlass(
-                                      icon: Icons.numbers,
-                                      text: 'Quantità (decrescente)',
-                                      isSelected: _currentSort == SortType.quantityDesc,
-                                    ),
+                                ),
+                                PopupMenuItem(
+                                  value: SortType.quantityDesc,
+                                  padding: EdgeInsets.zero,
+                                  child: _buildMenuItemGlass(
+                                    icon: Icons.numbers,
+                                    text: 'Quantità (decrescente)',
+                                    isSelected: _currentSort == SortType.quantityDesc,
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -824,6 +842,166 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
               ),
 
+              // Pulsante "Genera Ricetta" o "Crea ricetta"
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    child: _isSelectionMode
+                        ? Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withOpacity(0.9),
+                                  Colors.white.withOpacity(0.7),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.5),
+                                width: 1.5,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 15,
+                                  spreadRadius: -2,
+                                  offset: const Offset(0, 6),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              children: [
+                                // Annulla
+                                Expanded(
+                                  child: TextButton(
+                                    onPressed: () {
+                                      setState(() {
+                                        _isSelectionMode = false;
+                                        _selectedProductIds.clear();
+                                      });
+                                    },
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      backgroundColor: Colors.grey.withOpacity(0.1),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      'Annulla',
+                                      style: TextStyle(
+                                        color: Colors.grey[700],
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                // Crea ricetta
+                                Expanded(
+                                  flex: 2,
+                                  child: TextButton(
+                                    onPressed: _selectedProductIds.isEmpty
+                                        ? null
+                                        : () {
+                                            _generateRecipes();
+                                          },
+                                    style: TextButton.styleFrom(
+                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      backgroundColor: _selectedProductIds.isEmpty
+                                          ? Colors.grey[300]
+                                          : Colors.green[600],
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        const Icon(
+                                          Icons.restaurant_menu_rounded,
+                                          color: Colors.white,
+                                          size: 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          'Crea ricetta (${_selectedProductIds.length})',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                setState(() {
+                                  _isSelectionMode = true;
+                                });
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.green[400]!,
+                                      Colors.green[600]!,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.green.withOpacity(0.3),
+                                      blurRadius: 15,
+                                      spreadRadius: -2,
+                                      offset: const Offset(0, 6),
+                                    ),
+                                  ],
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.restaurant_menu_rounded,
+                                      color: Colors.white,
+                                      size: 24,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text(
+                                      'Genera Ricetta',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 17,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: -0.3,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+
               // Lista prodotti
               Expanded(
                 child: filteredInventory.isEmpty
@@ -849,7 +1027,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
                         itemCount: filteredInventory.length,
                         itemBuilder: (context, index) {
                           return _buildInventoryItem(filteredInventory[index]);
@@ -859,6 +1037,33 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+
+  Future<void> _generateRecipes() async {
+    // Recupera i nomi dei prodotti selezionati
+    final provider = Provider.of<InventoryProvider>(context, listen: false);
+    final selectedProducts = provider.inventory
+        .where((item) => _selectedProductIds.contains(item.id))
+        .map((item) => item.productName)
+        .toList();
+
+    if (selectedProducts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Seleziona almeno un prodotto'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // TODO: Implementare chiamata API e navigazione
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Generando ricette con: ${selectedProducts.join(", ")}'),
+        backgroundColor: Colors.green,
       ),
     );
   }
@@ -991,6 +1196,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Checkbox per selezione ricette
+                    if (_isSelectionMode)
+                      Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Transform.scale(
+                          scale: 1.3,
+                          child: Checkbox(
+                            value: _selectedProductIds.contains(item.id),
+                            onChanged: (bool? value) {
+                              setState(() {
+                                if (value == true) {
+                                  _selectedProductIds.add(item.id);
+                                } else {
+                                  _selectedProductIds.remove(item.id);
+                                }
+                              });
+                            },
+                            activeColor: Colors.green[600],
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                          ),
+                        ),
+                      ),
+
                     // Immagine prodotto (sempre visualizzata)
                     Container(
                       decoration: BoxDecoration(

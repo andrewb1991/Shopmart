@@ -117,6 +117,78 @@ class InventoryProvider with ChangeNotifier {
     }
   }
 
+  // Aggiorna quantità prodotto
+  Future<bool> updateQuantity(String id, int newQuantity) async {
+    if (newQuantity < 0) return false;
+
+    try {
+      final success = await _apiService.updateQuantity(id, newQuantity);
+      if (success) {
+        // Aggiorna solo l'item specifico localmente per una risposta più veloce
+        final index = _inventory.indexWhere((item) => item.id == id);
+        if (index != -1) {
+          // Ricrea l'item con la nuova quantità
+          final item = _inventory[index];
+          _inventory[index] = InventoryItem(
+            id: item.id,
+            barcode: item.barcode,
+            productName: item.productName,
+            brand: item.brand,
+            category: item.category,
+            quantity: newQuantity,
+            unit: item.unit,
+            expiryDate: item.expiryDate,
+            ingredients: item.ingredients,
+            nutritionInfo: item.nutritionInfo,
+            imageUrl: item.imageUrl,
+            status: item.status,
+            daysLeft: item.daysLeft,
+            suggestions: item.suggestions,
+          );
+          notifyListeners();
+        }
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = 'Errore nell\'aggiornamento della quantità';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Aggiorna prodotto completo
+  Future<bool> updateProduct({
+    required String id,
+    required String productName,
+    required String brand,
+    required int quantity,
+    required String unit,
+    required DateTime expiryDate,
+  }) async {
+    try {
+      final success = await _apiService.updateProduct(
+        id: id,
+        productName: productName,
+        brand: brand,
+        quantity: quantity,
+        unit: unit,
+        expiryDate: expiryDate,
+      );
+
+      if (success) {
+        // Ricarica l'inventario per ottenere i dati aggiornati (incluso il nuovo status)
+        await loadInventory();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _errorMessage = 'Errore nell\'aggiornamento del prodotto';
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Reset del prodotto corrente
   void clearCurrentProduct() {
     _currentProduct = null;

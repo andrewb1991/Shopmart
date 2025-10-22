@@ -16,7 +16,7 @@ app.use((req, res, next) => {
   console.log(`${req.method} ${req.path}`);
 
   res.header('Access-Control-Allow-Origin', 'http://localhost:3000');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   res.header('Access-Control-Allow-Credentials', 'true');
 
@@ -212,10 +212,12 @@ app.get('/api/inventory', async (req, res) => {
       else if (daysLeft <= 3) status = 'URGENTE';
       else if (daysLeft <= 7) status = 'ATTENZIONE';
 
-      return { 
-        ...product.toObject(), 
-        daysLeft, 
-        status 
+      const productObj = product.toObject();
+      return {
+        ...productObj,
+        id: productObj._id.toString(), // Aggiungi id come stringa per il frontend
+        daysLeft,
+        status
       };
     });
 
@@ -230,7 +232,76 @@ app.get('/api/inventory', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 4: Aggiorna quantità prodotto
+// ENDPOINT 4a: Aggiorna solo quantità (PATCH) - DEVE VENIRE PRIMA!
+// ============================================
+app.patch('/api/inventory/:id/quantity', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { quantity } = req.body;
+
+    if (quantity === undefined || quantity < 0) {
+      return res.status(400).json({ error: 'Quantità non valida' });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      { quantity },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ error: 'Prodotto non trovato' });
+    }
+
+    res.json({ success: true, product, message: 'Quantità aggiornata' });
+  } catch (error) {
+    console.error('Errore aggiornamento quantità:', error);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento della quantità' });
+  }
+});
+
+// ============================================
+// ENDPOINT 4b: Aggiorna prodotto completo (PATCH)
+// ============================================
+app.patch('/api/inventory/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { productName, brand, quantity, unit, expiryDate } = req.body;
+
+    // Validazione campi obbligatori
+    if (!productName || quantity === undefined || !expiryDate) {
+      return res.status(400).json({ error: 'Campi obbligatori mancanti' });
+    }
+
+    if (quantity < 0) {
+      return res.status(400).json({ error: 'Quantità non valida' });
+    }
+
+    const product = await Product.findByIdAndUpdate(
+      id,
+      {
+        productName,
+        brand,
+        quantity,
+        unit,
+        expiryDate: new Date(expiryDate),
+      },
+      { new: true }
+    );
+
+    if (!product) {
+      return res.status(404).json({ error: 'Prodotto non trovato' });
+    }
+
+    res.json({ success: true, product, message: 'Prodotto aggiornato' });
+  } catch (error) {
+    console.error('Errore aggiornamento prodotto:', error);
+    res.status(500).json({ error: 'Errore nell\'aggiornamento del prodotto' });
+  }
+});
+
+// ============================================
+// ENDPOINT 4c: Aggiorna quantità prodotto (PUT) - Legacy
 // ============================================
 app.put('/api/inventory/:id', async (req, res) => {
   try {
@@ -271,6 +342,130 @@ app.delete('/api/inventory/:id', async (req, res) => {
   } catch (error) {
     console.error('Errore:', error);
     res.status(500).json({ error: 'Errore nell\'eliminazione' });
+  }
+});
+
+// ============================================
+// ENDPOINT 6: Suggerisci ricette in base agli ingredienti
+// ============================================
+app.post('/api/recipes/suggest', async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ error: 'Ingredienti richiesti' });
+    }
+
+    // Spoonacular API key (da configurare in .env)
+    const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
+
+    if (!SPOONACULAR_API_KEY) {
+      return res.status(500).json({
+        error: 'API key non configurata',
+        message: 'Configura SPOONACULAR_API_KEY nel file .env'
+      });
+    }
+
+    // Crea stringa ingredienti separati da virgola
+    const ingredientString = ingredients.join(',');
+
+    console.log(`🔍 Cercando ricette con: ${ingredientString}`);
+
+    // Chiama Spoonacular API
+    const response = await axios.get(
+      `https://api.spoonacular.com/recipes/findByIngredients`,
+      {
+        params: {
+          apiKey: SPOONACULAR_API_KEY,
+          ingredients: ingredientString,
+          number: 10, // Numero di ricette da restituire
+          ranking: 2, // Massimizza ingredienti usati
+          ignorePantry: true, // Non ignorare ingredienti base
+          language: 'it' // Lingua italiana (se disponibile)
+        }
+      }
+    );
+
+    // Estrai le ricette
+    const recipes = response.data.map(recipe => ({
+      id: recipe.id,
+      title: recipe.title,
+      image: recipe.image,
+      usedIngredientCount: recipe.usedIngredientCount,
+      missedIngredientCount: recipe.missedIngredientCount,
+      usedIngredients: recipe.usedIngredients.map(ing => ing.name),
+      missedIngredients: recipe.missedIngredients.map(ing => ing.name),
+    }));
+
+    console.log(`✓ Trovate ${recipes.length} ricette`);
+
+    res.json({ success: true, recipes });
+  } catch (error) {
+    console.error('Errore suggerimenti ricette:', error.message);
+
+    if (error.response) {
+      // Errore dalla API di Spoonacular
+      console.error('Dettagli errore API:', error.response.data);
+      return res.status(error.response.status).json({
+        error: 'Errore API ricette',
+        details: error.response.data
+      });
+    }
+
+    res.status(500).json({ error: 'Errore nella ricerca delle ricette' });
+  }
+});
+
+// ============================================
+// ENDPOINT 7: Ottieni dettagli ricetta
+// ============================================
+app.get('/api/recipes/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
+
+    if (!SPOONACULAR_API_KEY) {
+      return res.status(500).json({ error: 'API key non configurata' });
+    }
+
+    console.log(`🔍 Recupero dettagli ricetta ID: ${id}`);
+
+    // Chiama Spoonacular per dettagli completi
+    const response = await axios.get(
+      `https://api.spoonacular.com/recipes/${id}/information`,
+      {
+        params: {
+          apiKey: SPOONACULAR_API_KEY,
+          includeNutrition: false
+        }
+      }
+    );
+
+    const recipe = response.data;
+
+    const recipeDetails = {
+      id: recipe.id,
+      title: recipe.title,
+      image: recipe.image,
+      servings: recipe.servings,
+      readyInMinutes: recipe.readyInMinutes,
+      sourceUrl: recipe.sourceUrl,
+      summary: recipe.summary,
+      instructions: recipe.instructions,
+      extendedIngredients: recipe.extendedIngredients?.map(ing => ({
+        name: ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        original: ing.original
+      })) || []
+    };
+
+    console.log(`✓ Dettagli ricetta recuperati: ${recipe.title}`);
+
+    res.json({ success: true, recipe: recipeDetails });
+  } catch (error) {
+    console.error('Errore dettagli ricetta:', error.message);
+    res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
   }
 });
 

@@ -158,11 +158,11 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Colonna sinistra: Aggiungi prodotto
-                SizedBox(
+                const SizedBox(
                   width: 400,
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(16),
-                    child: const AddProductWidget(),
+                    padding: EdgeInsets.all(16),
+                    child: AddProductWidget(),
                   ),
                 ),
 
@@ -262,7 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
               else
                 ...provider.inventory
                     .map((item) => _buildInventoryItem(item))
-                    .toList(),
+                    ,
             ],
           ),
         );
