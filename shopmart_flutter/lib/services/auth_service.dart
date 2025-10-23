@@ -8,6 +8,8 @@ import '../models/user_model.dart';
 class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
+    // IMPORTANTE: Sostituisci con il tuo Web Client ID da Google Cloud Console
+    serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
   );
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
@@ -190,5 +192,53 @@ class AuthService {
   Future<void> resetPassword(String email) async {
     // TODO: Implementare reset password tramite backend
     throw UnimplementedError('Reset password non ancora implementato');
+  }
+
+  // Aggiorna profilo
+  Future<UserModel?> updateProfile({
+    required String firstName,
+    required String lastName,
+    String? currentPassword,
+    String? newPassword,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) throw 'Token non trovato';
+
+      final body = <String, dynamic>{
+        'firstName': firstName,
+        'lastName': lastName,
+      };
+
+      // Aggiungi password solo se l'utente vuole cambiarla
+      if (currentPassword != null && newPassword != null) {
+        body['currentPassword'] = currentPassword;
+        body['newPassword'] = newPassword;
+      }
+
+      final response = await http.put(
+        Uri.parse('$baseUrl/api/auth/profile'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final user = UserModel.fromJson(data['user']);
+
+        // Aggiorna dati utente salvati
+        await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
+
+        return user;
+      } else {
+        final error = jsonDecode(response.body);
+        throw error['error'] ?? 'Errore durante l\'aggiornamento del profilo';
+      }
+    } catch (e) {
+      throw 'Errore durante l\'aggiornamento del profilo: $e';
+    }
   }
 }

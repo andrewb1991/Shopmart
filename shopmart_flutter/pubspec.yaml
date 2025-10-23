@@ -70,6 +70,12 @@ dependencies:
   # Secure storage per token
   flutter_secure_storage: ^9.2.2
 
+  # Local notifications
+  flutter_local_notifications: ^18.0.1
+
+  # Timezone per scheduling notifiche
+  timezone: ^0.9.4
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -80,6 +86,9 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^4.0.0
+
+  # Genera icone app per tutte le piattaforme
+  flutter_launcher_icons: ^0.14.2
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -95,6 +104,7 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - .env
+    - assets/images/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
@@ -121,3 +131,13 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Configurazione icone app
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  # Adaptive icon per Android con sfondo blu che si adatta meglio alla modalità scura
+  adaptive_icon_background: "#5DADE2"  # Blu che si adatta a entrambe le modalità
+  adaptive_icon_foreground: "assets/icons/app_icon.png"
+  # Per iOS l'icona è una sola, ma il sistema gestisce automaticamente l'aspetto

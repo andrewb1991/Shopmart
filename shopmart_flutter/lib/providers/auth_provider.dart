@@ -148,6 +148,36 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Aggiorna profilo
+  Future<bool> updateProfile({
+    required String firstName,
+    required String lastName,
+    String? currentPassword,
+    String? newPassword,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      _user = await _authService.updateProfile(
+        firstName: firstName,
+        lastName: lastName,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+
+      _isLoading = false;
+      notifyListeners();
+      return _user != null;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
   // Ottieni token per le API
   Future<String?> getToken() async {
     return await _authService.getToken();

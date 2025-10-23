@@ -193,6 +193,11 @@ const userSchema = new mongoose.Schema({
   displayName: { type: String },
   photoUrl: { type: String },
   googleId: { type: String, unique: true, sparse: true }, // Per Google Sign-In
+  notificationSettings: {
+    enabled: { type: Boolean, default: true },
+    urgentDays: { type: Number, default: 3 }, // Notifica quando mancano X giorni
+    warningDays: { type: Number, default: 7 }, // Notifica quando mancano X giorni
+  },
   createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 
@@ -441,6 +446,128 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Errore recupero utente:', error);
     res.status(500).json({ error: 'Errore nel recupero dei dati utente' });
+  }
+});
+
+// Aggiorna profilo utente (protetto)
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
+  try {
+    const { firstName, lastName, currentPassword, newPassword } = req.body;
+
+    if (!firstName || !lastName) {
+      return res.status(400).json({ error: 'Nome e cognome sono obbligatori' });
+    }
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    // Aggiorna nome e cognome
+    user.firstName = firstName;
+    user.lastName = lastName;
+    user.displayName = `${firstName} ${lastName}`;
+
+    // Se l'utente vuole cambiare la password
+    if (currentPassword && newPassword) {
+      // Verifica che l'utente abbia una password (non utente Google senza password)
+      if (!user.password) {
+        return res.status(400).json({ error: 'Account Google: impossibile cambiare password' });
+      }
+
+      // Verifica password attuale
+      const isPasswordValid = await user.comparePassword(currentPassword);
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Password attuale non corretta' });
+      }
+
+      // Valida nuova password
+      if (newPassword.length < 6) {
+        return res.status(400).json({ error: 'La nuova password deve avere almeno 6 caratteri' });
+      }
+
+      // Aggiorna password (verrà hashata dal middleware pre-save)
+      user.password = newPassword;
+    }
+
+    await user.save();
+
+    console.log(`✓ Profilo aggiornato: ${user.email}`);
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        photoUrl: user.photoUrl,
+      },
+    });
+  } catch (error) {
+    console.error('Errore aggiornamento profilo:', error);
+    res.status(500).json({ error: 'Errore durante l\'aggiornamento del profilo' });
+  }
+});
+
+// Aggiorna impostazioni notifiche (protetto)
+app.put('/api/auth/notifications', authenticateToken, async (req, res) => {
+  try {
+    const { enabled, urgentDays, warningDays } = req.body;
+
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    // Aggiorna impostazioni notifiche
+    if (enabled !== undefined) {
+      user.notificationSettings.enabled = enabled;
+    }
+    if (urgentDays !== undefined && urgentDays > 0) {
+      user.notificationSettings.urgentDays = urgentDays;
+    }
+    if (warningDays !== undefined && warningDays > 0) {
+      user.notificationSettings.warningDays = warningDays;
+    }
+
+    await user.save();
+
+    console.log(`✓ Impostazioni notifiche aggiornate: ${user.email}`);
+
+    res.json({
+      success: true,
+      notificationSettings: user.notificationSettings,
+    });
+  } catch (error) {
+    console.error('Errore aggiornamento notifiche:', error);
+    res.status(500).json({ error: 'Errore durante l\'aggiornamento delle notifiche' });
+  }
+});
+
+// Ottieni impostazioni notifiche (protetto)
+app.get('/api/auth/notifications', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    res.json({
+      success: true,
+      notificationSettings: user.notificationSettings || {
+        enabled: true,
+        urgentDays: 3,
+        warningDays: 7,
+      },
+    });
+  } catch (error) {
+    console.error('Errore recupero notifiche:', error);
+    res.status(500).json({ error: 'Errore nel recupero delle impostazioni' });
   }
 });
 
