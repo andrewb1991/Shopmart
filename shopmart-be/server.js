@@ -3,11 +3,16 @@ const express = require('express');
 const axios = require('axios');
 const mongoose = require('mongoose');
 const crypto = require('crypto');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const { translate } = require('@vitalets/google-translate-api');
 require('dotenv').config();
 
 // Funzione per generare UUID
 const uuidv4 = () => crypto.randomUUID();
+
+// JWT Secret (in produzione usa variabile d'ambiente)
+const JWT_SECRET = process.env.JWT_SECRET || 'shopmart_secret_key_change_in_production';
 
 // Dizionario statico per ingredienti e termini comuni
 const translationDictionary = {
@@ -178,6 +183,61 @@ const productSchema = new mongoose.Schema({
 const Product = mongoose.model('Product', productSchema);
 
 // ============================================
+// SCHEMA E MODELLO USER
+// ============================================
+const userSchema = new mongoose.Schema({
+  email: { type: String, required: true, unique: true, lowercase: true },
+  password: { type: String }, // Opzionale per utenti Google
+  firstName: { type: String },
+  lastName: { type: String },
+  displayName: { type: String },
+  photoUrl: { type: String },
+  googleId: { type: String, unique: true, sparse: true }, // Per Google Sign-In
+  createdAt: { type: Date, default: Date.now },
+}, { timestamps: true });
+
+// Hash password prima del salvataggio
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password') || !this.password) return next();
+
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
+// Metodo per verificare password
+userSchema.methods.comparePassword = async function(candidatePassword) {
+  if (!this.password) return false;
+  return await bcrypt.compare(candidatePassword, this.password);
+};
+
+const User = mongoose.model('User', userSchema);
+
+// ============================================
+// MIDDLEWARE: Verifica JWT Token
+// ============================================
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res.status(401).json({ error: 'Token mancante' });
+  }
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(403).json({ error: 'Token non valido' });
+    }
+    req.user = user; // Aggiungi user ID al request
+    next();
+  });
+};
+
+// ============================================
 // MODELLO PRODOTTO
 // ============================================
 // {
@@ -195,6 +255,194 @@ const Product = mongoose.model('Product', productSchema);
 //   imageUrl: "...",
 //   suggestions: [...]
 // }
+
+// ============================================
+// AUTH ENDPOINTS
+// ============================================
+
+// Registrazione con email e password
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email e password sono obbligatori' });
+    }
+
+    // Verifica se utente esiste già
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Email già registrata' });
+    }
+
+    // Crea nuovo utente
+    const user = new User({
+      email,
+      password, // Verrà hashata dal middleware pre-save
+      firstName,
+      lastName,
+      displayName: `${firstName} ${lastName}`,
+    });
+
+    await user.save();
+
+    // Genera JWT token
+    const token = jwt.sign(
+      { id: user._id.toString(), email: user.email },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    console.log(`✓ Utente registrato: ${email}`);
+
+    res.status(201).json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        photoUrl: user.photoUrl,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Errore registrazione:', error);
+    res.status(500).json({ error: 'Errore durante la registrazione' });
+  }
+});
+
+// Login con email e password
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Email e password sono obbligatori' });
+    }
+
+    // Trova utente
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
+
+    // Verifica password
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Credenziali non valide' });
+    }
+
+    // Genera JWT token
+    const token = jwt.sign(
+      { id: user._id.toString(), email: user.email },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    console.log(`✓ Utente loggato: ${email}`);
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        photoUrl: user.photoUrl,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Errore login:', error);
+    res.status(500).json({ error: 'Errore durante il login' });
+  }
+});
+
+// Google Sign-In
+app.post('/api/auth/google', async (req, res) => {
+  try {
+    const { googleId, email, displayName, photoUrl, firstName, lastName } = req.body;
+
+    if (!googleId || !email) {
+      return res.status(400).json({ error: 'Google ID ed email sono obbligatori' });
+    }
+
+    // Cerca utente esistente per googleId o email
+    let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
+    if (user) {
+      // Aggiorna googleId se mancante
+      if (!user.googleId) {
+        user.googleId = googleId;
+        await user.save();
+      }
+    } else {
+      // Crea nuovo utente
+      user = new User({
+        googleId,
+        email,
+        displayName: displayName || `${firstName} ${lastName}`,
+        photoUrl,
+        firstName,
+        lastName,
+      });
+      await user.save();
+      console.log(`✓ Nuovo utente Google: ${email}`);
+    }
+
+    // Genera JWT token
+    const token = jwt.sign(
+      { id: user._id.toString(), email: user.email },
+      JWT_SECRET,
+      { expiresIn: '30d' }
+    );
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        photoUrl: user.photoUrl,
+      },
+      token,
+    });
+  } catch (error) {
+    console.error('Errore Google Sign-In:', error);
+    res.status(500).json({ error: 'Errore durante l\'autenticazione con Google' });
+  }
+});
+
+// Ottieni info utente corrente (protetto)
+app.get('/api/auth/me', authenticateToken, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+
+    if (!user) {
+      return res.status(404).json({ error: 'Utente non trovato' });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        displayName: user.displayName,
+        photoUrl: user.photoUrl,
+      },
+    });
+  } catch (error) {
+    console.error('Errore recupero utente:', error);
+    res.status(500).json({ error: 'Errore nel recupero dei dati utente' });
+  }
+});
 
 // ============================================
 // ENDPOINT 1: Lookup prodotto da OpenFoodFacts
@@ -267,9 +515,9 @@ app.post('/api/product/lookup', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 2: Aggiungi prodotto al magazzino
+// ENDPOINT 2: Aggiungi prodotto al magazzino (protetto)
 // ============================================
-app.post('/api/inventory/add', async (req, res) => {
+app.post('/api/inventory/add', authenticateToken, async (req, res) => {
   try {
     const { barcode, productName, brand, category, quantity, unit, expiryDate, ingredients, nutritionInfo, imageUrl, suggestions } = req.body;
 
@@ -289,6 +537,7 @@ app.post('/api/inventory/add', async (req, res) => {
       nutritionInfo,
       imageUrl,
       suggestions: suggestions || [],
+      userId: req.user.id, // Associa prodotto all'utente autenticato
     });
 
     await newProduct.save();
@@ -301,11 +550,12 @@ app.post('/api/inventory/add', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 3: Ottieni inventario
+// ENDPOINT 3: Ottieni inventario (protetto)
 // ============================================
-app.get('/api/inventory', async (req, res) => {
+app.get('/api/inventory', authenticateToken, async (req, res) => {
   try {
-    const products = await Product.find();
+    // Filtra prodotti per utente autenticato
+    const products = await Product.find({ userId: req.user.id });
 
     // Calcola giorni a scadenza per ogni prodotto
     const inventoryWithStatus = products.map((product) => {
@@ -338,9 +588,9 @@ app.get('/api/inventory', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 4a: Aggiorna solo quantità (PATCH) - DEVE VENIRE PRIMA!
+// ENDPOINT 4a: Aggiorna solo quantità (PATCH protetto) - DEVE VENIRE PRIMA!
 // ============================================
-app.patch('/api/inventory/:id/quantity', async (req, res) => {
+app.patch('/api/inventory/:id/quantity', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
@@ -349,8 +599,9 @@ app.patch('/api/inventory/:id/quantity', async (req, res) => {
       return res.status(400).json({ error: 'Quantità non valida' });
     }
 
-    const product = await Product.findByIdAndUpdate(
-      id,
+    // Verifica che il prodotto appartenga all'utente
+    const product = await Product.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
       { quantity },
       { new: true }
     );
@@ -367,9 +618,9 @@ app.patch('/api/inventory/:id/quantity', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 4b: Aggiorna prodotto completo (PATCH)
+// ENDPOINT 4b: Aggiorna prodotto completo (PATCH protetto)
 // ============================================
-app.patch('/api/inventory/:id', async (req, res) => {
+app.patch('/api/inventory/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { productName, brand, quantity, unit, expiryDate } = req.body;
@@ -383,8 +634,9 @@ app.patch('/api/inventory/:id', async (req, res) => {
       return res.status(400).json({ error: 'Quantità non valida' });
     }
 
-    const product = await Product.findByIdAndUpdate(
-      id,
+    // Verifica che il prodotto appartenga all'utente
+    const product = await Product.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
       {
         productName,
         brand,
@@ -407,15 +659,16 @@ app.patch('/api/inventory/:id', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 4c: Aggiorna quantità prodotto (PUT) - Legacy
+// ENDPOINT 4c: Aggiorna quantità prodotto (PUT protetto) - Legacy
 // ============================================
-app.put('/api/inventory/:id', async (req, res) => {
+app.put('/api/inventory/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
     const { quantity } = req.body;
 
-    const product = await Product.findByIdAndUpdate(
-      id,
+    // Verifica che il prodotto appartenga all'utente
+    const product = await Product.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
       { quantity },
       { new: true }
     );
@@ -432,13 +685,14 @@ app.put('/api/inventory/:id', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 5: Elimina prodotto
+// ENDPOINT 5: Elimina prodotto (protetto)
 // ============================================
-app.delete('/api/inventory/:id', async (req, res) => {
+app.delete('/api/inventory/:id', authenticateToken, async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const product = await Product.findByIdAndDelete(id);
+
+    // Verifica che il prodotto appartenga all'utente
+    const product = await Product.findOneAndDelete({ _id: id, userId: req.user.id });
 
     if (!product) {
       return res.status(404).json({ error: 'Prodotto non trovato' });
@@ -550,12 +804,12 @@ savedRecipeSchema.index({ recipeId: 1, userId: 1 }, { unique: true });
 const SavedRecipe = mongoose.model('SavedRecipe', savedRecipeSchema);
 
 // ============================================
-// ENDPOINT 8: Salva ricetta
+// ENDPOINT 8: Salva ricetta (protetto)
 // ============================================
-app.post('/api/recipes/save', async (req, res) => {
+app.post('/api/recipes/save', authenticateToken, async (req, res) => {
   try {
     const { recipeId, title, image, servings, readyInMinutes, sourceUrl, summary, instructions, ingredients } = req.body;
-    const userId = req.body.userId || 'default_user';
+    const userId = req.user.id; // Usa userId dall'autenticazione
 
     if (!recipeId || !title) {
       return res.status(400).json({ error: 'recipeId e title sono obbligatori' });
@@ -585,7 +839,7 @@ app.post('/api/recipes/save', async (req, res) => {
 
     await savedRecipe.save();
 
-    console.log(`✓ Ricetta salvata: ${title} (ID: ${recipeId})`);
+    console.log(`✓ Ricetta salvata: ${title} (ID: ${recipeId}) per utente: ${userId}`);
 
     res.json({
       success: true,
@@ -599,11 +853,11 @@ app.post('/api/recipes/save', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 9: Ottieni ricette salvate
+// ENDPOINT 9: Ottieni ricette salvate (protetto)
 // ============================================
-app.get('/api/recipes/saved', async (req, res) => {
+app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
   try {
-    const userId = req.query.userId || 'default_user';
+    const userId = req.user.id; // Usa userId dall'autenticazione
 
     const savedRecipes = await SavedRecipe.find({ userId })
       .sort({ savedAt: -1 }); // Ordina per data di salvataggio (più recenti prima)
@@ -621,12 +875,12 @@ app.get('/api/recipes/saved', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 10: Rimuovi ricetta salvata
+// ENDPOINT 10: Rimuovi ricetta salvata (protetto)
 // ============================================
-app.delete('/api/recipes/saved/:recipeId', async (req, res) => {
+app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) => {
   try {
     const { recipeId } = req.params;
-    const userId = req.query.userId || 'default_user';
+    const userId = req.user.id; // Usa userId dall'autenticazione
 
     const deletedRecipe = await SavedRecipe.findOneAndDelete({
       recipeId: parseInt(recipeId),
@@ -637,7 +891,7 @@ app.delete('/api/recipes/saved/:recipeId', async (req, res) => {
       return res.status(404).json({ error: 'Ricetta non trovata' });
     }
 
-    console.log(`✓ Ricetta rimossa: ${deletedRecipe.title} (ID: ${recipeId})`);
+    console.log(`✓ Ricetta rimossa: ${deletedRecipe.title} (ID: ${recipeId}) per utente: ${userId}`);
 
     res.json({
       success: true,

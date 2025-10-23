@@ -3,10 +3,22 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/product.dart';
 import '../models/inventory_item.dart';
+import 'auth_service.dart';
 
 class ApiService {
+  final AuthService _authService = AuthService();
+
   static String get baseUrl =>
       dotenv.env['API_URL'] ?? 'http://localhost:5001/api';
+
+  // Ottieni headers con token JWT
+  Future<Map<String, String>> _getHeaders() async {
+    final token = await _authService.getToken();
+    return {
+      'Content-Type': 'application/json',
+      if (token != null) 'Authorization': 'Bearer $token',
+    };
+  }
 
   // Cerca prodotto per barcode
   Future<Product?> lookupProduct(String barcode) async {
@@ -33,9 +45,10 @@ class ApiService {
   // Ottieni inventario
   Future<List<InventoryItem>> getInventory() async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/inventory'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -60,9 +73,10 @@ class ApiService {
     required DateTime expiryDate,
   }) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$baseUrl/inventory/add'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'barcode': product.barcode,
           'productName': product.productName,
@@ -92,9 +106,10 @@ class ApiService {
   // Elimina prodotto dall'inventario
   Future<bool> deleteFromInventory(String id) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.delete(
         Uri.parse('$baseUrl/inventory/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -111,9 +126,10 @@ class ApiService {
   // Aggiorna quantità prodotto
   Future<bool> updateQuantity(String id, int newQuantity) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.patch(
         Uri.parse('$baseUrl/inventory/$id/quantity'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({'quantity': newQuantity}),
       );
 
@@ -138,9 +154,10 @@ class ApiService {
     required DateTime expiryDate,
   }) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.patch(
         Uri.parse('$baseUrl/inventory/$id'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'productName': productName,
           'brand': brand,
@@ -220,9 +237,10 @@ class ApiService {
   // Salva ricetta nel backend
   Future<bool> saveRecipe(RecipeDetail recipe) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.post(
         Uri.parse('$baseUrl/recipes/save'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
         body: jsonEncode({
           'recipeId': recipe.id,
           'title': recipe.title,
@@ -259,9 +277,10 @@ class ApiService {
   // Ottieni ricette salvate dal backend
   Future<List<RecipeDetail>> getSavedRecipes() async {
     try {
+      final headers = await _getHeaders();
       final response = await http.get(
         Uri.parse('$baseUrl/recipes/saved'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
@@ -292,9 +311,10 @@ class ApiService {
   // Rimuovi ricetta dal backend
   Future<bool> removeSavedRecipe(int recipeId) async {
     try {
+      final headers = await _getHeaders();
       final response = await http.delete(
         Uri.parse('$baseUrl/recipes/saved/$recipeId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: headers,
       );
 
       if (response.statusCode == 200) {
