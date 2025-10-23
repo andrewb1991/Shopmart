@@ -596,22 +596,89 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
   @override
   void initState() {
     super.initState();
-    // TODO: Controlla se la ricetta è già salvata quando implementiamo il provider
+    _checkIfRecipeIsSaved();
   }
 
-  void _toggleSaveRecipe() {
-    setState(() {
-      _isSaved = !_isSaved;
-    });
+  Future<void> _checkIfRecipeIsSaved() async {
+    final apiService = ApiService();
+    final savedRecipes = await apiService.getSavedRecipes();
 
-    // TODO: Salva/rimuovi ricetta dal provider
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(_isSaved ? 'Ricetta salvata!' : 'Ricetta rimossa'),
-        backgroundColor: _isSaved ? Colors.green : Colors.grey,
-        duration: const Duration(seconds: 2),
-      ),
-    );
+    // Controlla se la ricetta corrente è nella lista delle salvate
+    final isSaved = savedRecipes.any((recipe) => recipe.id == widget.recipe.id);
+
+    if (mounted) {
+      setState(() {
+        _isSaved = isSaved;
+      });
+    }
+  }
+
+  Future<void> _toggleSaveRecipe() async {
+    final apiService = ApiService();
+
+    if (_isSaved) {
+      // Rimuovi ricetta
+      setState(() {
+        _isSaved = false;
+      });
+
+      final success = await apiService.removeSavedRecipe(widget.recipe.id);
+
+      if (success) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ricetta rimossa'),
+            backgroundColor: Colors.grey,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Ripristina lo stato in caso di errore
+        setState(() {
+          _isSaved = true;
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante la rimozione della ricetta'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      // Salva ricetta
+      setState(() {
+        _isSaved = true;
+      });
+
+      final success = await apiService.saveRecipe(widget.recipe);
+
+      if (success) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Ricetta salvata!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        // Ripristina lo stato in caso di errore
+        setState(() {
+          _isSaved = false;
+        });
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Errore durante il salvataggio della ricetta'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
   }
 
   @override

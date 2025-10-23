@@ -114,11 +114,16 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   void _showFullRecipeDetailsSheet(RecipeDetail recipe) {
+    final savedRecipesProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _RecipeDetailSheet(recipe: recipe),
+      builder: (context) => ChangeNotifierProvider.value(
+        value: savedRecipesProvider,
+        child: _RecipeDetailSheet(recipe: recipe),
+      ),
     );
   }
 
