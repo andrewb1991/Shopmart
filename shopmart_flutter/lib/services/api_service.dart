@@ -216,6 +216,97 @@ class ApiService {
       return null;
     }
   }
+
+  // Salva ricetta nel backend
+  Future<bool> saveRecipe(RecipeDetail recipe) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipes/save'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'recipeId': recipe.id,
+          'title': recipe.title,
+          'image': recipe.image,
+          'servings': recipe.servings,
+          'readyInMinutes': recipe.readyInMinutes,
+          'sourceUrl': recipe.sourceUrl,
+          'summary': recipe.summary,
+          'instructions': recipe.instructions,
+          'ingredients': recipe.ingredients.map((ing) => {
+            'name': ing.name,
+            'amount': ing.amount,
+            'unit': ing.unit,
+            'original': ing.original,
+          }).toList(),
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      // 409 = già salvata, consideriamo come successo
+      if (response.statusCode == 409) {
+        return true;
+      }
+      return false;
+    } catch (e) {
+      print('Errore durante il salvataggio della ricetta: $e');
+      return false;
+    }
+  }
+
+  // Ottieni ricette salvate dal backend
+  Future<List<RecipeDetail>> getSavedRecipes() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipes/saved'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['recipes'] != null) {
+          return (data['recipes'] as List)
+              .map((recipe) => RecipeDetail.fromJson({
+                'id': recipe['recipeId'],
+                'title': recipe['title'],
+                'image': recipe['image'],
+                'servings': recipe['servings'],
+                'readyInMinutes': recipe['readyInMinutes'],
+                'sourceUrl': recipe['sourceUrl'],
+                'summary': recipe['summary'],
+                'instructions': recipe['instructions'],
+                'extendedIngredients': recipe['ingredients'],
+              }))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Errore durante il recupero delle ricette salvate: $e');
+      return [];
+    }
+  }
+
+  // Rimuovi ricetta dal backend
+  Future<bool> removeSavedRecipe(int recipeId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/recipes/saved/$recipeId'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['success'] == true;
+      }
+      return false;
+    } catch (e) {
+      print('Errore durante la rimozione della ricetta: $e');
+      return false;
+    }
+  }
 }
 
 // Model per ricetta base

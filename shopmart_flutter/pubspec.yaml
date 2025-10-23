@@ -58,6 +58,12 @@ dependencies:
   # Environment variables
   flutter_dotenv: ^5.2.1
 
+  # PDF generation
+  pdf: ^3.11.1
+
+  # Sharing files
+  share_plus: ^10.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

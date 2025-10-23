@@ -575,56 +575,118 @@ class RecipesScreen extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.9,
-        minChildSize: 0.5,
-        maxChildSize: 0.95,
-        builder: (context, scrollController) {
-          return ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Colors.white.withOpacity(0.95),
-                      Colors.white.withOpacity(0.85),
-                    ],
-                  ),
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(28),
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    // Handle
-                    Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 8),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.grey[300],
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
+      builder: (context) => _RecipeDetailSheet(recipe: recipe),
+    );
+  }
+}
 
-                    // Contenuto
-                    Expanded(
-                      child: SingleChildScrollView(
-                        controller: scrollController,
-                        padding: const EdgeInsets.all(24),
+// Widget separato per il bottom sheet con stato
+class _RecipeDetailSheet extends StatefulWidget {
+  final RecipeDetail recipe;
+
+  const _RecipeDetailSheet({required this.recipe});
+
+  @override
+  State<_RecipeDetailSheet> createState() => _RecipeDetailSheetState();
+}
+
+class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
+  bool _isSaved = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // TODO: Controlla se la ricetta è già salvata quando implementiamo il provider
+  }
+
+  void _toggleSaveRecipe() {
+    setState(() {
+      _isSaved = !_isSaved;
+    });
+
+    // TODO: Salva/rimuovi ricetta dal provider
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_isSaved ? 'Ricetta salvata!' : 'Ricetta rimossa'),
+        backgroundColor: _isSaved ? Colors.green : Colors.grey,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.9,
+      minChildSize: 0.5,
+      maxChildSize: 0.95,
+      builder: (context, scrollController) {
+        return ClipRRect(
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withOpacity(0.95),
+                    Colors.white.withOpacity(0.85),
+                  ],
+                ),
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+              ),
+              child: Column(
+                children: [
+                  // Handle e pulsante Salva
+                  Container(
+                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+                    child: Row(
+                      children: [
+                        // Handle centrato
+                        Expanded(
+                          child: Center(
+                            child: Container(
+                              width: 40,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Pulsante Salva in alto a destra
+                        IconButton(
+                          onPressed: _toggleSaveRecipe,
+                          icon: Icon(
+                            _isSaved ? Icons.bookmark : Icons.bookmark_border,
+                            color: _isSaved ? Colors.blue[700] : Colors.grey[600],
+                            size: 28,
+                          ),
+                          tooltip: _isSaved ? 'Rimuovi ricetta' : 'Salva ricetta',
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Contenuto
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Immagine
-                            if (recipe.image != null)
+                            if (widget.recipe.image != null)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
                                 child: Image.network(
-                                  recipe.image!,
+                                  widget.recipe.image!,
                                   width: double.infinity,
                                   height: 250,
                                   fit: BoxFit.cover,
@@ -635,7 +697,7 @@ class RecipesScreen extends StatelessWidget {
 
                             // Titolo
                             Text(
-                              recipe.title,
+                              widget.recipe.title,
                               style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w700,
@@ -648,17 +710,17 @@ class RecipesScreen extends StatelessWidget {
                             // Info rapide
                             Row(
                               children: [
-                                if (recipe.servings != null) ...[
+                                if (widget.recipe.servings != null) ...[
                                   Icon(Icons.people, size: 18, color: Colors.grey[600]),
                                   const SizedBox(width: 4),
-                                  Text('${recipe.servings} porzioni',
+                                  Text('${widget.recipe.servings} porzioni',
                                       style: TextStyle(color: Colors.grey[600])),
                                   const SizedBox(width: 16),
                                 ],
-                                if (recipe.readyInMinutes != null) ...[
+                                if (widget.recipe.readyInMinutes != null) ...[
                                   Icon(Icons.timer, size: 18, color: Colors.grey[600]),
                                   const SizedBox(width: 4),
-                                  Text('${recipe.readyInMinutes} min',
+                                  Text('${widget.recipe.readyInMinutes} min',
                                       style: TextStyle(color: Colors.grey[600])),
                                 ],
                               ],
@@ -667,7 +729,7 @@ class RecipesScreen extends StatelessWidget {
                             const SizedBox(height: 24),
 
                             // Ingredienti
-                            if (recipe.ingredients.isNotEmpty) ...[
+                            if (widget.recipe.ingredients.isNotEmpty) ...[
                               const Text(
                                 'Ingredienti:',
                                 style: TextStyle(
@@ -676,7 +738,7 @@ class RecipesScreen extends StatelessWidget {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              ...recipe.ingredients.map((ing) => Padding(
+                              ...widget.recipe.ingredients.map((ing) => Padding(
                                     padding: const EdgeInsets.only(bottom: 8),
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -697,8 +759,8 @@ class RecipesScreen extends StatelessWidget {
                             ],
 
                             // Istruzioni
-                            if (recipe.instructions != null &&
-                                recipe.instructions!.isNotEmpty) ...[
+                            if (widget.recipe.instructions != null &&
+                                widget.recipe.instructions!.isNotEmpty) ...[
                               const Text(
                                 'Preparazione:',
                                 style: TextStyle(
@@ -708,7 +770,7 @@ class RecipesScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                recipe.instructions!
+                                widget.recipe.instructions!
                                     .replaceAll(RegExp(r'<[^>]*>'), ''), // Rimuovi HTML
                                 style: const TextStyle(
                                   fontSize: 15,
@@ -726,7 +788,6 @@ class RecipesScreen extends StatelessWidget {
             ),
           );
         },
-      ),
-    );
+      );
   }
 }

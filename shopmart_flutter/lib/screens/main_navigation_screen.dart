@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import 'inventory_screen.dart';
-import 'expiring_screen.dart';
+import 'home_with_tabs_screen.dart';
+import 'saved_recipes_screen.dart';
 import 'add_product_screen.dart';
+import 'shopping_list_screen.dart';
 import 'settings_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -49,10 +50,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         controller: _pageController,
         onPageChanged: _onPageChanged,
         children: const [
-          InventoryScreen(), // 0: In casa
-          ExpiringScreen(), // 1: In scadenza
+          HomeWithTabsScreen(), // 0: In casa (con tab "Tutti" e "In scadenza")
+          SavedRecipesScreen(), // 1: Ricette salvate
           AddProductScreen(), // 2: Aggiungi (centrale)
-          SettingsScreen(), // 3: Lista spesa (placeholder)
+          ShoppingListScreen(), // 3: Lista spesa
           SettingsScreen(), // 4: Impostazioni
         ],
       ),
@@ -116,11 +117,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                           label: 'In casa',
                           index: 0,
                         ),
-                        // Pulsante 2: In scadenza
+                        // Pulsante 2: Ricette
                         _buildNavItem(
-                          icon: Icons.warning_amber_outlined,
-                          activeIcon: Icons.warning_amber,
-                          label: 'In scadenza',
+                          icon: Icons.restaurant_outlined,
+                          activeIcon: Icons.restaurant,
+                          label: 'Ricette',
                           index: 1,
                         ),
                         // Spazio per il pulsante centrale

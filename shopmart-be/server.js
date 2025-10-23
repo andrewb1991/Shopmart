@@ -523,7 +523,166 @@ app.post('/api/recipes/suggest', async (req, res) => {
 });
 
 // ============================================
-// ENDPOINT 7: Ottieni dettagli ricetta
+// SCHEMA E MODELLO RICETTE SALVATE
+// ============================================
+const savedRecipeSchema = new mongoose.Schema({
+  recipeId: { type: Number, required: true },
+  userId: { type: String, default: 'default_user' }, // Per future features multi-utente
+  title: { type: String, required: true },
+  image: { type: String },
+  servings: { type: Number },
+  readyInMinutes: { type: Number },
+  sourceUrl: { type: String },
+  summary: { type: String },
+  instructions: { type: String },
+  ingredients: [{
+    name: String,
+    amount: Number,
+    unit: String,
+    original: String
+  }],
+  savedAt: { type: Date, default: Date.now }
+}, { timestamps: true });
+
+// Indice composto per evitare duplicati (stesso utente + stessa ricetta)
+savedRecipeSchema.index({ recipeId: 1, userId: 1 }, { unique: true });
+
+const SavedRecipe = mongoose.model('SavedRecipe', savedRecipeSchema);
+
+// ============================================
+// ENDPOINT 8: Salva ricetta
+// ============================================
+app.post('/api/recipes/save', async (req, res) => {
+  try {
+    const { recipeId, title, image, servings, readyInMinutes, sourceUrl, summary, instructions, ingredients } = req.body;
+    const userId = req.body.userId || 'default_user';
+
+    if (!recipeId || !title) {
+      return res.status(400).json({ error: 'recipeId e title sono obbligatori' });
+    }
+
+    // Controlla se già salvata
+    const existing = await SavedRecipe.findOne({ recipeId, userId });
+    if (existing) {
+      return res.status(409).json({
+        error: 'Ricetta già salvata',
+        recipe: existing
+      });
+    }
+
+    const savedRecipe = new SavedRecipe({
+      recipeId,
+      userId,
+      title,
+      image,
+      servings,
+      readyInMinutes,
+      sourceUrl,
+      summary,
+      instructions,
+      ingredients: ingredients || []
+    });
+
+    await savedRecipe.save();
+
+    console.log(`✓ Ricetta salvata: ${title} (ID: ${recipeId})`);
+
+    res.json({
+      success: true,
+      message: 'Ricetta salvata',
+      recipe: savedRecipe
+    });
+  } catch (error) {
+    console.error('Errore salvataggio ricetta:', error.message);
+    res.status(500).json({ error: 'Errore nel salvataggio della ricetta' });
+  }
+});
+
+// ============================================
+// ENDPOINT 9: Ottieni ricette salvate
+// ============================================
+app.get('/api/recipes/saved', async (req, res) => {
+  try {
+    const userId = req.query.userId || 'default_user';
+
+    const savedRecipes = await SavedRecipe.find({ userId })
+      .sort({ savedAt: -1 }); // Ordina per data di salvataggio (più recenti prima)
+
+    console.log(`✓ Recuperate ${savedRecipes.length} ricette salvate per utente: ${userId}`);
+
+    res.json({
+      success: true,
+      recipes: savedRecipes
+    });
+  } catch (error) {
+    console.error('Errore recupero ricette salvate:', error.message);
+    res.status(500).json({ error: 'Errore nel recupero delle ricette salvate' });
+  }
+});
+
+// ============================================
+// ENDPOINT 10: Rimuovi ricetta salvata
+// ============================================
+app.delete('/api/recipes/saved/:recipeId', async (req, res) => {
+  try {
+    const { recipeId } = req.params;
+    const userId = req.query.userId || 'default_user';
+
+    const deletedRecipe = await SavedRecipe.findOneAndDelete({
+      recipeId: parseInt(recipeId),
+      userId
+    });
+
+    if (!deletedRecipe) {
+      return res.status(404).json({ error: 'Ricetta non trovata' });
+    }
+
+    console.log(`✓ Ricetta rimossa: ${deletedRecipe.title} (ID: ${recipeId})`);
+
+    res.json({
+      success: true,
+      message: 'Ricetta rimossa',
+      recipe: deletedRecipe
+    });
+  } catch (error) {
+    console.error('Errore rimozione ricetta:', error.message);
+    res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
+  }
+});
+
+// ============================================
+// FUNZIONE: Ottieni suggerimenti per categoria
+// ============================================
+async function getSuggestions(category) {
+  const suggestions = {
+    Dairy: [
+      'Usalo nei dolci o caffè',
+      'Prepara una salsa cremosa',
+      'Congela per gelato fatto in casa',
+    ],
+    Bakery: [
+      'Fai pangrattato tostato',
+      'Usa come miglierina per budini',
+      'Prepara pani di pane',
+    ],
+    Fruits: [
+      'Prepara una marmellata',
+      'Fai un succo o frullato',
+      'Congela per sorbetto',
+    ],
+    Vegetables: [
+      'Fai un minestrone congelato',
+      'Prepara una salsa',
+      'Metti sott\'olio o sottaceto',
+    ],
+    default: ['Controlla ricette online', 'Dona a qualcuno', 'Compostaggio sostenibile'],
+  };
+
+  return suggestions[category] || suggestions.default;
+}
+
+// ============================================
+// ENDPOINT 7: Ottieni dettagli ricetta (DEVE essere DOPO le route specifiche)
 // ============================================
 app.get('/api/recipes/:id', async (req, res) => {
   try {
@@ -576,37 +735,6 @@ app.get('/api/recipes/:id', async (req, res) => {
     res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
   }
 });
-
-// ============================================
-// FUNZIONE: Ottieni suggerimenti per categoria
-// ============================================
-async function getSuggestions(category) {
-  const suggestions = {
-    Dairy: [
-      'Usalo nei dolci o caffè',
-      'Prepara una salsa cremosa',
-      'Congela per gelato fatto in casa',
-    ],
-    Bakery: [
-      'Fai pangrattato tostato',
-      'Usa come miglierina per budini',
-      'Prepara pani di pane',
-    ],
-    Fruits: [
-      'Prepara una marmellata',
-      'Fai un succo o frullato',
-      'Congela per sorbetto',
-    ],
-    Vegetables: [
-      'Fai un minestrone congelato',
-      'Prepara una salsa',
-      'Metti sott\'olio o sottaceto',
-    ],
-    default: ['Controlla ricette online', 'Dona a qualcuno', 'Compostaggio sostenibile'],
-  };
-
-  return suggestions[category] || suggestions.default;
-}
 
 // ============================================
 // SERVER START
