@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../providers/inventory_provider.dart';
 import '../screens/barcode_scanner_screen.dart';
 import '../screens/date_scanner_screen.dart';
+import '../models/product.dart';
 
 class AddProductWidget extends StatefulWidget {
   const AddProductWidget({super.key});
@@ -14,12 +15,21 @@ class AddProductWidget extends StatefulWidget {
 
 class _AddProductWidgetState extends State<AddProductWidget> {
   final _quantityController = TextEditingController(text: '1');
+  final _productNameController = TextEditingController();
+  final _brandController = TextEditingController();
+  final _barcodeController = TextEditingController();
+  final _unitController = TextEditingController(text: 'pz');
   DateTime? _selectedDate;
   bool _showIngredients = false;
+  bool _isManualMode = false;
 
   @override
   void dispose() {
     _quantityController.dispose();
+    _productNameController.dispose();
+    _brandController.dispose();
+    _barcodeController.dispose();
+    _unitController.dispose();
     super.dispose();
   }
 
@@ -84,14 +94,37 @@ class _AddProductWidgetState extends State<AddProductWidget> {
   Future<void> _addProduct() async {
     final provider = Provider.of<InventoryProvider>(context, listen: false);
 
-    if (provider.currentProduct == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Scansiona prima un prodotto'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
+    // Validazione modalità manuale
+    if (_isManualMode) {
+      if (_productNameController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Inserisci il nome del prodotto'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+      if (_unitController.text.trim().isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Inserisci l\'unità di misura'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+    } else {
+      // Validazione modalità scansione
+      if (provider.currentProduct == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Scansiona prima un prodotto'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
     }
 
     if (_selectedDate == null) {
@@ -115,11 +148,37 @@ class _AddProductWidgetState extends State<AddProductWidget> {
       return;
     }
 
-    final success = await provider.addProduct(
-      product: provider.currentProduct!,
-      quantity: quantity,
-      expiryDate: _selectedDate!,
-    );
+    bool success;
+
+    if (_isManualMode) {
+      // Creazione prodotto manuale
+      final manualProduct = Product(
+        barcode: _barcodeController.text.trim().isEmpty
+            ? 'MANUAL_${DateTime.now().millisecondsSinceEpoch}'
+            : _barcodeController.text.trim(),
+        productName: _productNameController.text.trim(),
+        brand: _brandController.text.trim().isEmpty
+            ? 'N/D'
+            : _brandController.text.trim(),
+        category: null,
+        unit: _unitController.text.trim(),
+        ingredients: null,
+        nutritionInfo: null,
+        imageUrl: null,
+      );
+
+      success = await provider.addProduct(
+        product: manualProduct,
+        quantity: quantity,
+        expiryDate: _selectedDate!,
+      );
+    } else {
+      success = await provider.addProduct(
+        product: provider.currentProduct!,
+        quantity: quantity,
+        expiryDate: _selectedDate!,
+      );
+    }
 
     if (!mounted) return;
 
@@ -134,6 +193,12 @@ class _AddProductWidgetState extends State<AddProductWidget> {
         _selectedDate = null;
         _quantityController.text = '1';
         _showIngredients = false;
+        if (_isManualMode) {
+          _productNameController.clear();
+          _brandController.clear();
+          _barcodeController.clear();
+          _unitController.text = 'pz';
+        }
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,25 +241,260 @@ class _AddProductWidgetState extends State<AddProductWidget> {
               ),
               const SizedBox(height: 20),
 
-              // Pulsante scansione
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: provider.isLoading ? null : _openBarcodeScanner,
-                  icon: const Icon(Icons.qr_code_scanner),
-                  label: const Text('Scansiona Codice a Barre'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+              // Toggle modalità
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isManualMode = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: !_isManualMode ? Colors.blue : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.qr_code_scanner,
+                                color: !_isManualMode ? Colors.white : Colors.grey[600],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Scansione',
+                                style: TextStyle(
+                                  color: !_isManualMode ? Colors.white : Colors.grey[600],
+                                  fontWeight: !_isManualMode ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _isManualMode = true;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          decoration: BoxDecoration(
+                            color: _isManualMode ? Colors.blue : Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.edit,
+                                color: _isManualMode ? Colors.white : Colors.grey[600],
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Manuale',
+                                style: TextStyle(
+                                  color: _isManualMode ? Colors.white : Colors.grey[600],
+                                  fontWeight: _isManualMode ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
 
               const SizedBox(height: 20),
+
+              // Pulsante scansione (visibile solo in modalità scansione)
+              if (!_isManualMode) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: provider.isLoading ? null : _openBarcodeScanner,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scansiona Codice a Barre'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Form manuale (visibile solo in modalità manuale)
+              if (_isManualMode) ...[
+                TextField(
+                  controller: _productNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nome Prodotto *',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _brandController,
+                  decoration: InputDecoration(
+                    labelText: 'Brand (opzionale)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _barcodeController,
+                  decoration: InputDecoration(
+                    labelText: 'Codice a Barre (opzionale)',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 12,
+                    ),
+                  ),
+                  keyboardType: TextInputType.number,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _quantityController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Quantità *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: TextField(
+                        controller: _unitController,
+                        decoration: InputDecoration(
+                          labelText: 'Unità *',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: InkWell(
+                        onTap: () => _selectDate(context),
+                        child: InputDecorator(
+                          decoration: InputDecoration(
+                            labelText: 'Data scadenza *',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 12,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                _selectedDate == null
+                                    ? 'Seleziona data'
+                                    : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                                style: TextStyle(
+                                  color: _selectedDate == null
+                                      ? Colors.grey[600]
+                                      : Colors.black87,
+                                ),
+                              ),
+                              const Icon(Icons.calendar_today, size: 20),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      onPressed: _scanExpiryDate,
+                      icon: const Icon(Icons.document_scanner),
+                      tooltip: 'Scansiona data',
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.blue[50],
+                        foregroundColor: Colors.blue,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: provider.isLoading ? null : _addProduct,
+                    icon: const Icon(Icons.add),
+                    label: Text(
+                      provider.isLoading
+                          ? 'Aggiunta in corso...'
+                          : 'Aggiungi al magazzino',
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
 
               // Dettagli prodotto trovato
               if (provider.currentProduct != null) ...[

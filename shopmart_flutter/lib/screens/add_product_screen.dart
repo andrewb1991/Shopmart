@@ -32,10 +32,10 @@ class AddProductScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: SafeArea(
+      body: const SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-          child: const AddProductWidget(),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, 100),
+          child: AddProductWidget(),
         ),
       ),
     );
