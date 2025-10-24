@@ -24,7 +24,8 @@ class AuthProvider with ChangeNotifier {
     try {
       debugPrint('🔄 AuthProvider: Caricamento utente salvato...');
       _user = await _authService.getSavedUser();
-      debugPrint('✅ AuthProvider: Utente caricato: ${_user?.email ?? "nessuno"}');
+      debugPrint(
+          '✅ AuthProvider: Utente caricato: ${_user?.email ?? "nessuno"}');
       notifyListeners();
     } catch (e, stackTrace) {
       debugPrint('❌ Errore nel caricamento utente: $e');
@@ -53,7 +54,8 @@ class AuthProvider with ChangeNotifier {
         lastName: lastName,
       );
 
-      debugPrint('✅ AuthProvider: Registrazione completata. User: ${_user?.email}');
+      debugPrint(
+          '✅ AuthProvider: Registrazione completata. User: ${_user?.email}');
       _isLoading = false;
       notifyListeners();
       return _user != null;
@@ -95,17 +97,22 @@ class AuthProvider with ChangeNotifier {
 
   // Login con Google
   Future<bool> signInWithGoogle() async {
+    debugPrint('🔄 AuthProvider: start signInWithGoogle');
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      _user = await _authService.signInWithGoogle();
+      final resultUser = await _authService.signInWithGoogle();
+      _user = resultUser;
+      debugPrint('✅ AuthProvider: signInWithGoogle resultUser=${_user?.email}');
 
       _isLoading = false;
       notifyListeners();
       return _user != null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      debugPrint('❌ AuthProvider: signInWithGoogle error: $e');
+      debugPrint('Stack: $stackTrace');
       _error = e.toString();
       _isLoading = false;
       notifyListeners();
@@ -115,13 +122,17 @@ class AuthProvider with ChangeNotifier {
 
   // Logout
   Future<void> signOut() async {
+    debugPrint('🔄 AuthProvider: start signOut');
     _isLoading = true;
     notifyListeners();
 
     try {
       await _authService.signOut();
       _user = null;
-    } catch (e) {
+      debugPrint('✅ AuthProvider: signOut completed, user cleared');
+    } catch (e, stackTrace) {
+      debugPrint('❌ AuthProvider: signOut error: $e');
+      debugPrint('Stack: $stackTrace');
       _error = e.toString();
     }
 

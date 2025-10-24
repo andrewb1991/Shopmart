@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../providers/auth_provider.dart';
+import 'main_navigation_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -73,6 +74,14 @@ class _AuthScreenState extends State<AuthScreen> {
           content: Text(authProvider.error!),
           backgroundColor: Colors.red,
         ),
+      );
+    } else if (success) {
+      // Ensure immediate navigation to main screen after successful Google sign-in.
+      // AuthWrapper should handle this as well, but in some cases forcing a
+      // navigation avoids UI stuck on the login screen.
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const MainNavigationScreen()),
+        (route) => false,
       );
     }
   }
@@ -246,7 +255,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 'Accedi',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: _isLogin ? Colors.white : Colors.grey[600],
+                                  color: _isLogin
+                                      ? Colors.white
+                                      : Colors.grey[600],
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
                                 ),
@@ -289,7 +300,9 @@ class _AuthScreenState extends State<AuthScreen> {
                                 'Registrati',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(
-                                  color: !_isLogin ? Colors.white : Colors.grey[600],
+                                  color: !_isLogin
+                                      ? Colors.white
+                                      : Colors.grey[600],
                                   fontWeight: FontWeight.w600,
                                   fontSize: 15,
                                 ),
@@ -409,10 +422,12 @@ class _AuthScreenState extends State<AuthScreen> {
                           child: Material(
                             color: Colors.transparent,
                             child: InkWell(
-                              onTap: authProvider.isLoading ? null : _submitForm,
+                              onTap:
+                                  authProvider.isLoading ? null : _submitForm,
                               borderRadius: BorderRadius.circular(20),
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 16),
                                 child: authProvider.isLoading
                                     ? const Center(
                                         child: SizedBox(
