@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:provider/provider.dart';
 import '../services/api_service.dart';
+import '../providers/saved_recipes_provider.dart';
 
 class RecipesScreen extends StatelessWidget {
   final List<Recipe> recipes;
@@ -577,11 +579,16 @@ class RecipesScreen extends StatelessWidget {
   }
 
   void _showFullRecipeDetails(BuildContext context, RecipeDetail recipe) {
+    final savedRecipesProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _RecipeDetailSheet(recipe: recipe),
+      builder: (context) => ChangeNotifierProvider.value(
+        value: savedRecipesProvider,
+        child: _RecipeDetailSheet(recipe: recipe),
+      ),
     );
   }
 }
@@ -597,154 +604,102 @@ class _RecipeDetailSheet extends StatefulWidget {
 }
 
 class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
-  bool _isSaved = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkIfRecipeIsSaved();
-  }
-
-  Future<void> _checkIfRecipeIsSaved() async {
-    final apiService = ApiService();
-    final savedRecipes = await apiService.getSavedRecipes();
-
-    // Controlla se la ricetta corrente è nella lista delle salvate
-    final isSaved = savedRecipes.any((recipe) => recipe.id == widget.recipe.id);
-
-    if (mounted) {
-      setState(() {
-        _isSaved = isSaved;
-      });
-    }
-  }
-
-  Future<void> _toggleSaveRecipe() async {
-    final apiService = ApiService();
-
-    if (_isSaved) {
-      // Rimuovi ricetta
-      setState(() {
-        _isSaved = false;
-      });
-
-      final success = await apiService.removeSavedRecipe(widget.recipe.id);
-
-      if (success) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ricetta rimossa'),
-            backgroundColor: Colors.grey,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        // Ripristina lo stato in caso di errore
-        setState(() {
-          _isSaved = true;
-        });
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante la rimozione della ricetta'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } else {
-      // Salva ricetta
-      setState(() {
-        _isSaved = true;
-      });
-
-      final success = await apiService.saveRecipe(widget.recipe);
-
-      if (success) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Ricetta salvata!'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      } else {
-        // Ripristina lo stato in caso di errore
-        setState(() {
-          _isSaved = false;
-        });
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Errore durante il salvataggio della ricetta'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 0.95,
-      builder: (context, scrollController) {
-        return ClipRRect(
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Colors.white.withOpacity(0.95),
-                    Colors.white.withOpacity(0.85),
-                  ],
-                ),
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-              ),
-              child: Column(
-                children: [
-                  // Handle e pulsante Salva
-                  Container(
-                    padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
-                    child: Row(
-                      children: [
-                        // Handle centrato
-                        Expanded(
-                          child: Center(
-                            child: Container(
-                              width: 40,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[300],
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                        ),
-                        // Pulsante Salva in alto a destra
-                        IconButton(
-                          onPressed: _toggleSaveRecipe,
-                          icon: Icon(
-                            _isSaved ? Icons.bookmark : Icons.bookmark_border,
-                            color: _isSaved ? Colors.blue[700] : Colors.grey[600],
-                            size: 28,
-                          ),
-                          tooltip: _isSaved ? 'Rimuovi ricetta' : 'Salva ricetta',
-                        ),
+    return Consumer<SavedRecipesProvider>(
+      builder: (context, savedRecipesProvider, child) {
+        final isSaved = savedRecipesProvider.isRecipeSaved(widget.recipe.id);
+
+        return DraggableScrollableSheet(
+          initialChildSize: 0.9,
+          minChildSize: 0.5,
+          maxChildSize: 0.95,
+          builder: (context, scrollController) {
+            return ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        Colors.white.withOpacity(0.95),
+                        Colors.white.withOpacity(0.85),
                       ],
                     ),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(28),
+                    ),
                   ),
+                  child: Column(
+                    children: [
+                      // Handle e pulsante Salva
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
+                        child: Row(
+                          children: [
+                            // Handle centrato
+                            Expanded(
+                              child: Center(
+                                child: Container(
+                                  width: 40,
+                                  height: 4,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Pulsante Salva/Rimuovi in alto a destra
+                            IconButton(
+                              onPressed: () async {
+                                if (isSaved) {
+                                  await savedRecipesProvider.removeRecipe(widget.recipe.id);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(Icons.check_circle, color: Colors.white),
+                                          SizedBox(width: 12),
+                                          Text('Ricetta rimossa dai salvati'),
+                                        ],
+                                      ),
+                                      backgroundColor: Colors.grey,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                } else {
+                                  await savedRecipesProvider.saveRecipe(widget.recipe);
+                                  if (!context.mounted) return;
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Row(
+                                        children: [
+                                          Icon(Icons.check_circle, color: Colors.white),
+                                          SizedBox(width: 12),
+                                          Text('Ricetta salvata!'),
+                                        ],
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: Icon(
+                                isSaved ? Icons.bookmark : Icons.bookmark_border,
+                                color: isSaved ? Colors.blue[700] : Colors.grey[600],
+                                size: 28,
+                              ),
+                              tooltip: isSaved ? 'Rimuovi ricetta' : 'Salva ricetta',
+                            ),
+                          ],
+                        ),
+                      ),
 
                   // Contenuto
                   Expanded(
@@ -862,5 +817,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
           );
         },
       );
+    },
+    );
   }
 }

@@ -10,7 +10,7 @@ class SavedRecipesProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   SavedRecipesProvider() {
-    loadSavedRecipes();
+    // Non caricare le ricette qui - verranno caricate dopo il login
   }
 
   // Carica le ricette salvate dal backend

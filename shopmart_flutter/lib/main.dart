@@ -133,10 +133,41 @@ class AuthWrapper extends StatefulWidget {
 }
 
 class _AuthWrapperState extends State<AuthWrapper> {
+  bool _wasAuthenticated = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Carica le ricette salvate se l'utente è già autenticato
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final savedRecipesProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+
+      if (authProvider.isAuthenticated) {
+        debugPrint('🔄 Utente già autenticato, carico le ricette salvate...');
+        _wasAuthenticated = true;
+        savedRecipesProvider.loadSavedRecipes();
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<AuthProvider>(
-      builder: (context, authProvider, child) {
+    return Consumer2<AuthProvider, SavedRecipesProvider>(
+      builder: (context, authProvider, savedRecipesProvider, child) {
+        // Se l'utente si è appena autenticato, carica le ricette salvate
+        if (authProvider.isAuthenticated && !_wasAuthenticated) {
+          _wasAuthenticated = true;
+          // Carica le ricette salvate dopo che il frame corrente è completato
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            debugPrint('🔄 Caricamento ricette salvate dopo login...');
+            savedRecipesProvider.loadSavedRecipes();
+          });
+        } else if (!authProvider.isAuthenticated && _wasAuthenticated) {
+          // L'utente ha fatto logout, resetta lo stato
+          _wasAuthenticated = false;
+        }
+
         // Show AuthScreen if not authenticated, MainNavigationScreen if authenticated
         return authProvider.isAuthenticated
             ? const MainNavigationScreen()

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
@@ -35,21 +36,109 @@ class _AddProductWidgetState extends State<AddProductWidget> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 30)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 3650)),
-      locale: const Locale('it', 'IT'),
-      helpText: 'Seleziona data di scadenza',
-      cancelText: 'Annulla',
-      confirmText: 'OK',
+    if (kIsWeb) {
+      // Web: usa un dialog con TextField per input data manuale
+      await _showWebDatePicker(context);
+    } else {
+      // Mobile: usa il date picker nativo
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: DateTime.now().add(const Duration(days: 30)),
+        firstDate: DateTime.now(),
+        lastDate: DateTime.now().add(const Duration(days: 3650)),
+        locale: const Locale('it', 'IT'),
+        helpText: 'Seleziona data di scadenza',
+        cancelText: 'Annulla',
+        confirmText: 'OK',
+      );
+      if (picked != null && picked != _selectedDate) {
+        setState(() {
+          _selectedDate = picked;
+        });
+      }
+    }
+  }
+
+  Future<void> _showWebDatePicker(BuildContext context) async {
+    final TextEditingController dateController = TextEditingController(
+      text: _selectedDate != null
+        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
+        : DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 30))),
     );
-    if (picked != null && picked != _selectedDate) {
+
+    final result = await showDialog<DateTime?>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Seleziona data di scadenza'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: dateController,
+                decoration: const InputDecoration(
+                  labelText: 'Data (AAAA-MM-GG)',
+                  hintText: '2024-12-31',
+                  border: OutlineInputBorder(),
+                  suffixIcon: Icon(Icons.calendar_today),
+                ),
+                keyboardType: TextInputType.datetime,
+                onTap: () {
+                  // Posiziona il cursore alla fine
+                  dateController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: dateController.text.length),
+                  );
+                },
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Formato: AAAA-MM-GG (es. 2024-12-31)',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: const Text('Annulla'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                try {
+                  final parsedDate = DateTime.parse(dateController.text);
+                  if (parsedDate.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('La data deve essere nel futuro'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+                  Navigator.of(context).pop(parsedDate);
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Formato data non valido. Usa AAAA-MM-GG'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (result != null && mounted) {
       setState(() {
-        _selectedDate = picked;
+        _selectedDate = result;
       });
     }
+
+    dateController.dispose();
   }
 
   Future<void> _scanExpiryDate() async {
