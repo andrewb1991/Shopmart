@@ -298,19 +298,42 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         if (data['success'] == true && data['recipes'] != null) {
-          return (data['recipes'] as List)
-              .map((recipe) => RecipeDetail.fromJson({
-                    'id': recipe['recipeId'],
-                    'title': recipe['title'],
-                    'image': recipe['image'],
-                    'servings': recipe['servings'],
-                    'readyInMinutes': recipe['readyInMinutes'],
-                    'sourceUrl': recipe['sourceUrl'],
-                    'summary': recipe['summary'],
-                    'instructions': recipe['instructions'],
-                    'extendedIngredients': recipe['ingredients'],
-                  }))
-              .toList();
+          return (data['recipes'] as List).map((recipe) {
+            // Defensive parsing: saved recipe documents may come from DB (savedrecipes)
+            // or from an external enrichment. Normalize fields for RecipeDetail.fromJson.
+            final dynamic rawId = recipe['recipeId'] ?? recipe['id'] ?? recipe['_id'];
+            int parsedId = 0;
+            if (rawId is int) parsedId = rawId;
+            else if (rawId is String) parsedId = int.tryParse(rawId) ?? 0;
+            else if (rawId is Map && rawId.containsKey(r"\$numberInt")) {
+              parsedId = int.tryParse(rawId[r"\$numberInt"].toString()) ?? 0;
+            }
+
+            final title = recipe['title'] ?? recipe['name'] ?? '';
+            final image = recipe['image'] ?? recipe['imageUrl'] ?? recipe['thumbnail'] ?? null;
+            final servings = recipe['servings'] is int ? recipe['servings'] : (recipe['servings'] != null ? int.tryParse(recipe['servings'].toString()) : null);
+            final readyInMinutes = recipe['readyInMinutes'] is int ? recipe['readyInMinutes'] : (recipe['readyInMinutes'] != null ? int.tryParse(recipe['readyInMinutes'].toString()) : null);
+            final sourceUrl = recipe['sourceUrl'] ?? recipe['source_url'] ?? recipe['source'] ?? null;
+            final summary = recipe['summary'] ?? recipe['description'] ?? null;
+            final instructions = recipe['instructions'] ?? recipe['instruction'] ?? null;
+
+            // Ingredients may be stored as 'ingredients' (DB) or 'extendedIngredients' (spoonacular)
+            final rawIngredients = recipe['ingredients'] ?? recipe['extendedIngredients'] ?? [];
+            List<dynamic> ingredientsList = [];
+            if (rawIngredients is List) ingredientsList = rawIngredients;
+
+            return RecipeDetail.fromJson({
+              'id': parsedId,
+              'title': title,
+              'image': image,
+              'servings': servings,
+              'readyInMinutes': readyInMinutes,
+              'sourceUrl': sourceUrl,
+              'summary': summary,
+              'instructions': instructions,
+              'extendedIngredients': ingredientsList,
+            });
+          }).toList();
         }
       }
       return [];

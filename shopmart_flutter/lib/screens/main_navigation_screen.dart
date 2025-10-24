@@ -5,6 +5,8 @@ import 'saved_recipes_screen.dart';
 import 'add_product_screen.dart';
 import 'shopping_list_screen.dart';
 import 'settings_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/saved_recipes_provider.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -41,6 +43,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeInOut,
     );
+    // If navigating to Saved Recipes, trigger a refresh of saved recipes
+    if (index == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final savedProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+        savedProvider.loadSavedRecipes();
+      });
+    }
   }
 
   @override

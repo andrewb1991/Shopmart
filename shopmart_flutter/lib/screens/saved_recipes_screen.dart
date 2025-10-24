@@ -23,6 +23,16 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Carica le ricette salvate dopo il build iniziale
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final savedProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+      savedProvider.loadSavedRecipes();
+    });
+  }
+
   Future<void> _searchRecipes(String query) async {
     if (query.trim().isEmpty) {
       setState(() {
@@ -130,7 +140,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Use colorScheme directly; per-widget cards compute theme where needed
 
     return Scaffold(
       backgroundColor: colorScheme.background,
