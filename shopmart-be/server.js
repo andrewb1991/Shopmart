@@ -266,6 +266,107 @@ app.delete('/api/inventory/:id', authenticateToken, async (req, res) => {
   try { const { id } = req.params; const product = await Product.findOneAndDelete({ _id: id, userId: req.user.id }); if (!product) return res.status(404).json({ error: 'Prodotto non trovato' }); res.json({ success: true, message: 'Prodotto eliminato', product }); } catch (err) { console.error('Errore delete inventory:', err); res.status(500).json({ error: 'Errore nell\'eliminazione' }); }
 });
 
+// ============================================
+// FUNZIONE: Ottieni suggerimenti per categoria
+// ============================================
+async function getSuggestions(category) {
+  const suggestions = {
+    Dairy: [
+      'Usalo nei dolci o caffè',
+      'Prepara una salsa cremosa',
+      'Congela per gelato fatto in casa',
+    ],
+    Bakery: [
+      'Fai pangrattato tostato',
+      'Usa come miglierina per budini',
+      'Prepara pani di pane',
+    ],
+    Fruits: [
+      'Prepara una marmellata',
+      'Fai un succo o frullato',
+      'Congela per sorbetto',
+    ],
+    Vegetables: [
+      'Fai un minestrone congelato',
+      'Prepara una salsa',
+      'Metti sott\'olio o sottaceto',
+    ],
+    default: ['Controlla ricette online', 'Dona a qualcuno', 'Compostaggio sostenibile'],
+  };
+
+  return suggestions[category] || suggestions.default;
+}
+
+// ============================================
+// ENDPOINT: Lookup prodotto da OpenFoodFacts
+// ============================================
+app.post('/api/product/lookup', async (req, res) => {
+  try {
+    const { barcode } = req.body;
+
+    if (!barcode) {
+      return res.status(400).json({ error: 'Barcode richiesto' });
+    }
+
+    // Chiama OpenFoodFacts API con lingua italiana
+    const response = await axios.get(
+      `https://world.openfoodfacts.org/api/v2/product/${barcode}?fields=code,product_name,product_name_it,brands,categories,categories_tags,ingredients_text,ingredients_text_it,nutriments,image_front_url,quantity&lc=it`
+    );
+
+    if (response.data.status === 0 || !response.data.product) {
+      return res.status(404).json({ error: 'Prodotto non trovato' });
+    }
+
+    const product = response.data.product;
+
+    // Estrai categoria in italiano dai tags
+    let categoryIT = 'N/A';
+    if (product.categories_tags && product.categories_tags.length > 0) {
+      // I tag hanno formato "it:nome-categoria" o "en:nome-categoria"
+      const itTag = product.categories_tags.find(tag => tag.startsWith('it:'));
+      if (itTag) {
+        categoryIT = itTag.replace('it:', '').replace(/-/g, ' ');
+        // Capitalizza la prima lettera
+        categoryIT = categoryIT.charAt(0).toUpperCase() + categoryIT.slice(1);
+      } else {
+        // Se non c'è tag italiano, usa il primo disponibile
+        categoryIT = product.categories_tags[0].replace(/^[a-z]{2}:/, '').replace(/-/g, ' ');
+        categoryIT = categoryIT.charAt(0).toUpperCase() + categoryIT.slice(1);
+      }
+    } else if (product.categories) {
+      // Fallback: usa la prima categoria dalla stringa
+      categoryIT = product.categories.split(',')[0].trim();
+    }
+
+    // Estrai dati rilevanti (priorità alla lingua italiana)
+    const productData = {
+      barcode: product.code || barcode,
+      productName: product.product_name_it || product.product_name || 'Sconosciuto',
+      brand: product.brands || 'N/A',
+      category: categoryIT,
+      ingredients: product.ingredients_text_it || product.ingredients_text || 'Non disponibili',
+      nutritionInfo: {
+        energy: product.nutriments?.energy_100g || product.nutriments?.['energy-kcal_100g'],
+        protein: product.nutriments?.proteins_100g,
+        fat: product.nutriments?.fat_100g,
+        carbs: product.nutriments?.carbohydrates_100g,
+        salt: product.nutriments?.salt_100g,
+      },
+      imageUrl: product.image_front_url || null,
+      quantity: 1,
+      unit: product.quantity || 'pz',
+    };
+
+    // Recupera suggerimenti di utilizzo basati su categoria
+    const suggestions = await getSuggestions(productData.category);
+
+    res.json({ success: true, product: productData, suggestions });
+  } catch (error) {
+    console.error('Errore lookup:', error.message);
+    res.status(500).json({ error: 'Errore nella ricerca del prodotto' });
+  }
+});
+
 // -- minimal recipes endpoints (keep as-is or extend)
 app.post('/api/recipes/suggest', async (req, res) => {
   try {
