@@ -136,7 +136,15 @@ class AuthService {
 
   // Logout
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    try {
+      // Google sign out può fallire se l'utente non ha effettuato l'accesso con Google;
+      // gestiamo eventuali errori senza interrompere la pulizia delle credenziali locali.
+      await _googleSignIn.signOut();
+    } catch (e) {
+      // Ignora errori di GoogleSignIn durante il logout
+    }
+
+    // Rimuovi sempre le credenziali locali
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _userKey);
   }

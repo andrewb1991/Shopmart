@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
+import 'auth_screen.dart';
 import 'profile_screen.dart';
 import 'notifications_settings_screen.dart';
 
@@ -30,7 +31,23 @@ class SettingsScreen extends StatelessWidget {
 
     if (confirmed == true && context.mounted) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.signOut();
+      try {
+        await authProvider.signOut();
+
+        // Dopo il logout, pulisci la navigation stack e torna alla schermata di login
+        if (context.mounted) {
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const AuthScreen()),
+            (route) => false,
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Errore durante il logout: $e')),
+          );
+        }
+      }
     }
   }
 
@@ -62,7 +79,8 @@ class SettingsScreen extends StatelessWidget {
               margin: const EdgeInsets.symmetric(horizontal: 16),
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.cardTheme.color ?? (isDarkMode ? Colors.grey[850] : Colors.white),
+                color: theme.cardTheme.color ??
+                    (isDarkMode ? Colors.grey[850] : Colors.white),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -127,7 +145,8 @@ class SettingsScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: theme.cardTheme.color ?? (isDarkMode ? Colors.grey[850] : Colors.white),
+                color: theme.cardTheme.color ??
+                    (isDarkMode ? Colors.grey[850] : Colors.white),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -159,7 +178,8 @@ class SettingsScreen extends StatelessWidget {
                     onTap: () {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const NotificationsSettingsScreen(),
+                          builder: (context) =>
+                              const NotificationsSettingsScreen(),
                         ),
                       );
                     },
@@ -188,7 +208,8 @@ class SettingsScreen extends StatelessWidget {
             Container(
               margin: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: theme.cardTheme.color ?? (isDarkMode ? Colors.grey[850] : Colors.white),
+                color: theme.cardTheme.color ??
+                    (isDarkMode ? Colors.grey[850] : Colors.white),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -297,7 +318,9 @@ class SettingsScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  themeProvider.isDarkMode ? 'Tema scuro attivo' : 'Tema chiaro attivo',
+                  themeProvider.isDarkMode
+                      ? 'Tema scuro attivo'
+                      : 'Tema chiaro attivo',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.grey[600],
