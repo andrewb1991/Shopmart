@@ -171,16 +171,63 @@ app.post('/api/auth/google', async (req, res) => {
   try {
     const { googleId, email, displayName, photoUrl, firstName, lastName } = req.body;
     if (!googleId || !email) return res.status(400).json({ error: 'Google ID ed email sono obbligatori' });
+
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
+
     if (user) {
-      if (!user.googleId) { user.googleId = googleId; await user.save(); }
+      // Utente esistente - aggiorna googleId se mancante
+      if (!user.googleId) {
+        user.googleId = googleId;
+        // Aggiorna anche displayName se mancante
+        if (!user.displayName && displayName) {
+          user.displayName = displayName;
+        }
+        // Aggiorna photoUrl se fornito
+        if (photoUrl && !user.photoUrl) {
+          user.photoUrl = photoUrl;
+        }
+        await user.save();
+      }
     } else {
-      user = new User({ googleId, email, displayName: displayName || `${firstName} ${lastName}`, photoUrl, firstName, lastName });
+      // Nuovo utente - costruisci displayName con fallback
+      let finalDisplayName = displayName;
+      if (!finalDisplayName && firstName && lastName) {
+        finalDisplayName = `${firstName} ${lastName}`.trim();
+      } else if (!finalDisplayName && firstName) {
+        finalDisplayName = firstName;
+      } else if (!finalDisplayName) {
+        // Usa email come fallback finale
+        finalDisplayName = email.split('@')[0];
+      }
+
+      user = new User({
+        googleId,
+        email,
+        displayName: finalDisplayName,
+        photoUrl: photoUrl || null,
+        firstName: firstName || null,
+        lastName: lastName || null
+      });
       await user.save();
     }
+
     const token = jwt.sign({ id: user._id.toString(), email: user.email }, JWT_SECRET, { expiresIn: '30d' });
-    res.json({ success: true, user: { id: user._id.toString(), email: user.email, firstName: user.firstName, lastName: user.lastName, displayName: user.displayName }, token });
-  } catch (err) { console.error('Errore Google Sign-In:', err); res.status(500).json({ error: 'Errore durante l\'autenticazione con Google' }); }
+    res.json({
+      success: true,
+      user: {
+        id: user._id.toString(),
+        email: user.email,
+        firstName: user.firstName || null,
+        lastName: user.lastName || null,
+        displayName: user.displayName || null,
+        photoUrl: user.photoUrl || null
+      },
+      token
+    });
+  } catch (err) {
+    console.error('Errore Google Sign-In:', err);
+    res.status(500).json({ error: 'Errore durante l\'autenticazione con Google' });
+  }
 });
 
 app.get('/api/auth/me', authenticateToken, async (req, res) => {
