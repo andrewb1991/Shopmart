@@ -129,8 +129,11 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: colorScheme.background,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
@@ -146,8 +149,8 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
-              backgroundColor: Colors.white.withOpacity(0.7),
-              foregroundColor: Colors.black87,
+              backgroundColor: colorScheme.surface.withOpacity(0.7),
+              foregroundColor: colorScheme.onSurface,
               elevation: 0,
               toolbarHeight: 100,
             ),
@@ -160,7 +163,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
           children: [
             // Barra di ricerca
             Container(
-              color: const Color(0xFFF5F5F7),
+              color: colorScheme.background,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(20),
@@ -168,10 +171,10 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                   filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                   child: Container(
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
+                      color: colorScheme.surface.withOpacity(0.8),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
+                        color: colorScheme.surfaceVariant.withOpacity(0.5),
                         width: 1.5,
                       ),
                     ),
@@ -181,12 +184,12 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                       decoration: InputDecoration(
                         hintText: 'Cerca ricette per ingrediente...',
                         hintStyle: TextStyle(
-                          color: Colors.grey[600],
+                          color: colorScheme.onSurfaceVariant,
                           fontSize: 15,
                         ),
                         prefixIcon: Icon(
                           Icons.search_rounded,
-                          color: Colors.grey[700],
+                          color: colorScheme.onSurfaceVariant,
                           size: 24,
                         ),
                         suffixIcon: _searchController.text.isNotEmpty
@@ -302,6 +305,9 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   Widget _buildSavedRecipeCard(RecipeDetail recipeDetail) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
@@ -318,13 +324,13 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withOpacity(0.9),
-                      Colors.white.withOpacity(0.7),
+                      colorScheme.surface.withOpacity(isDark ? 0.8 : 0.9),
+                      colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
+                    color: colorScheme.surfaceVariant.withOpacity(0.5),
                     width: 1.5,
                   ),
                   boxShadow: [

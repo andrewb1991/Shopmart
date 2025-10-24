@@ -217,6 +217,9 @@ class _AddProductWidgetState extends State<AddProductWidget> {
     TextInputType? keyboardType,
     bool enabled = true,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -227,13 +230,13 @@ class _AddProductWidgetState extends State<AddProductWidget> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.8),
-                Colors.white.withOpacity(0.6),
+                colorScheme.surface.withOpacity(isDark ? 0.7 : 0.8),
+                colorScheme.surface.withOpacity(isDark ? 0.5 : 0.6),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withOpacity(0.5),
+              color: colorScheme.surfaceVariant.withOpacity(0.5),
               width: 1.5,
             ),
           ),
@@ -241,14 +244,15 @@ class _AddProductWidgetState extends State<AddProductWidget> {
             controller: controller,
             keyboardType: keyboardType,
             enabled: enabled,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
             ),
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                color: Colors.grey[700],
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
               border: InputBorder.none,
@@ -265,6 +269,9 @@ class _AddProductWidgetState extends State<AddProductWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<InventoryProvider>(
       builder: (context, provider, child) {
         return Column(
@@ -281,13 +288,13 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white.withOpacity(0.9),
-                        Colors.white.withOpacity(0.7),
+                        colorScheme.surface.withOpacity(isDark ? 0.8 : 0.9),
+                        colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                       ],
                     ),
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.5),
+                      color: colorScheme.surfaceVariant.withOpacity(0.5),
                       width: 1.5,
                     ),
                     boxShadow: [
@@ -317,8 +324,8 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        Colors.blue[600]!,
-                                        Colors.blue[700]!,
+                                        colorScheme.primary,
+                                        colorScheme.primary,
                                       ],
                                     )
                                   : null,
@@ -326,7 +333,7 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                               boxShadow: !_isManualMode
                                   ? [
                                       BoxShadow(
-                                        color: Colors.blue.withOpacity(0.3),
+                                        color: colorScheme.primary.withOpacity(0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 4),
                                       ),
@@ -339,8 +346,8 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                                 Icon(
                                   Icons.qr_code_scanner_rounded,
                                   color: !_isManualMode
-                                      ? Colors.white
-                                      : Colors.grey[600],
+                                      ? colorScheme.onPrimary
+                                      : colorScheme.onSurfaceVariant,
                                   size: 22,
                                 ),
                                 const SizedBox(width: 8),
@@ -348,8 +355,8 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                                   'Scansione',
                                   style: TextStyle(
                                     color: !_isManualMode
-                                        ? Colors.white
-                                        : Colors.grey[600],
+                                        ? colorScheme.onPrimary
+                                        : colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                   ),
@@ -374,8 +381,8 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        Colors.blue[600]!,
-                                        Colors.blue[700]!,
+                                        colorScheme.primary,
+                                        colorScheme.primary,
                                       ],
                                     )
                                   : null,
@@ -383,7 +390,7 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                               boxShadow: _isManualMode
                                   ? [
                                       BoxShadow(
-                                        color: Colors.blue.withOpacity(0.3),
+                                        color: colorScheme.primary.withOpacity(0.3),
                                         blurRadius: 8,
                                         offset: const Offset(0, 4),
                                       ),
@@ -396,8 +403,8 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                                 Icon(
                                   Icons.edit_rounded,
                                   color: _isManualMode
-                                      ? Colors.white
-                                      : Colors.grey[600],
+                                      ? colorScheme.onPrimary
+                                      : colorScheme.onSurfaceVariant,
                                   size: 22,
                                 ),
                                 const SizedBox(width: 8),
@@ -405,8 +412,8 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                                   'Manuale',
                                   style: TextStyle(
                                     color: _isManualMode
-                                        ? Colors.white
-                                        : Colors.grey[600],
+                                        ? colorScheme.onPrimary
+                                        : colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w600,
                                     fontSize: 15,
                                   ),
@@ -700,13 +707,13 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withOpacity(0.9),
-                          Colors.white.withOpacity(0.7),
+                          colorScheme.surface.withOpacity(isDark ? 0.8 : 0.9),
+                          colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
+                        color: colorScheme.surfaceVariant.withOpacity(0.5),
                         width: 1.5,
                       ),
                       boxShadow: [

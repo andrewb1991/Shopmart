@@ -85,6 +85,9 @@ class _AuthScreenState extends State<AuthScreen> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
@@ -95,13 +98,13 @@ class _AuthScreenState extends State<AuthScreen> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Colors.white.withOpacity(0.8),
-                Colors.white.withOpacity(0.6),
+                colorScheme.surface.withOpacity(isDark ? 0.7 : 0.8),
+                colorScheme.surface.withOpacity(isDark ? 0.5 : 0.6),
               ],
             ),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: Colors.white.withOpacity(0.5),
+              color: colorScheme.surfaceVariant.withOpacity(0.5),
               width: 1.5,
             ),
           ),
@@ -110,17 +113,18 @@ class _AuthScreenState extends State<AuthScreen> {
             obscureText: obscureText,
             keyboardType: keyboardType,
             validator: validator,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.w500,
+              color: colorScheme.onSurface,
             ),
             decoration: InputDecoration(
               labelText: label,
               labelStyle: TextStyle(
-                color: Colors.grey[700],
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
-              prefixIcon: Icon(icon, color: Colors.grey[700]),
+              prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant),
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
@@ -135,8 +139,11 @@ class _AuthScreenState extends State<AuthScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: colorScheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -155,7 +162,7 @@ class _AuthScreenState extends State<AuthScreen> {
                   letterSpacing: -1.5,
                   foreground: Paint()
                     ..shader = LinearGradient(
-                      colors: [Colors.blue[600]!, Colors.blue[800]!],
+                      colors: [colorScheme.primary, colorScheme.primary],
                     ).createShader(const Rect.fromLTWH(0, 0, 200, 70)),
                 ),
               ),
@@ -165,7 +172,7 @@ class _AuthScreenState extends State<AuthScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.grey[600],
+                  color: colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -183,13 +190,13 @@ class _AuthScreenState extends State<AuthScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withOpacity(0.9),
-                          Colors.white.withOpacity(0.7),
+                          colorScheme.surface.withOpacity(isDark ? 0.8 : 0.9),
+                          colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
+                        color: colorScheme.surfaceVariant.withOpacity(0.5),
                         width: 1.5,
                       ),
                       boxShadow: [

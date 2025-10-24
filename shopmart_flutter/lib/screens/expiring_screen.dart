@@ -568,8 +568,11 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: colorScheme.background,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
@@ -585,15 +588,15 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
-              backgroundColor: Colors.white.withOpacity(0.7),
-              foregroundColor: Colors.black87,
+              backgroundColor: colorScheme.surface.withOpacity(0.7),
+              foregroundColor: colorScheme.onSurface,
               elevation: 0,
               toolbarHeight: 100,
               actions: [
                 Container(
                   margin: const EdgeInsets.only(right: 12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.5),
+                    color: colorScheme.surface.withOpacity(0.5),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: IconButton(
@@ -663,7 +666,7 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
               SafeArea(
                 bottom: false,
                 child: Container(
-                  color: const Color(0xFFF5F5F7),
+                  color: colorScheme.background,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Row(
                   children: [
@@ -676,26 +679,26 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
+                              color: colorScheme.surface.withOpacity(0.8),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
+                                color: colorScheme.surfaceVariant.withOpacity(0.5),
                                 width: 1.5,
                               ),
                             ),
                             child: PopupMenuButton<SortType>(
                               icon: Icon(
                                 Icons.filter_list_rounded,
-                                color: Colors.blue[700],
+                                color: colorScheme.primary,
                                 size: 24,
                               ),
-                              color: Colors.white.withOpacity(0.95),
+                              color: colorScheme.surface.withOpacity(0.95),
                               elevation: 20,
                               shadowColor: Colors.black.withOpacity(0.2),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(20),
                                 side: BorderSide(
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: colorScheme.surfaceVariant.withOpacity(0.5),
                                   width: 1.5,
                                 ),
                               ),
@@ -793,10 +796,10 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.8),
+                              color: colorScheme.surface.withOpacity(0.8),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
+                                color: colorScheme.surfaceVariant.withOpacity(0.5),
                                 width: 1.5,
                               ),
                             ),
@@ -810,19 +813,19 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                               decoration: InputDecoration(
                                 hintText: 'Cerca per nome o marca...',
                                 hintStyle: TextStyle(
-                                  color: Colors.grey[600],
+                                  color: colorScheme.onSurfaceVariant,
                                   fontSize: 15,
                                 ),
                                 prefixIcon: Icon(
                                   Icons.search_rounded,
-                                  color: Colors.grey[700],
+                                  color: colorScheme.onSurfaceVariant,
                                   size: 24,
                                 ),
                                 suffixIcon: _searchQuery.isNotEmpty
                                     ? IconButton(
                                         icon: Icon(
                                           Icons.clear_rounded,
-                                          color: Colors.grey[700],
+                                          color: colorScheme.onSurfaceVariant,
                                         ),
                                         onPressed: () {
                                           setState(() {
@@ -850,7 +853,7 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
 
               // Pulsante "Genera Ricetta" o "Crea ricetta" (FISSO)
               Container(
-                color: const Color(0xFFF5F5F7),
+                color: colorScheme.background,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
@@ -864,13 +867,13 @@ class _ExpiringScreenState extends State<ExpiringScreen> {
                                 begin: Alignment.topLeft,
                                 end: Alignment.bottomRight,
                                 colors: [
-                                  Colors.white.withOpacity(0.9),
-                                  Colors.white.withOpacity(0.7),
+                                  colorScheme.surface.withOpacity(0.9),
+                                  colorScheme.surface.withOpacity(0.7),
                                 ],
                               ),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
+                                color: colorScheme.surfaceVariant.withOpacity(0.5),
                                 width: 1.5,
                               ),
                               boxShadow: [
