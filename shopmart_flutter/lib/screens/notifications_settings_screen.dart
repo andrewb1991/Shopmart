@@ -4,16 +4,18 @@ import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/app_config.dart';
 
 class NotificationsSettingsScreen extends StatefulWidget {
   const NotificationsSettingsScreen({super.key});
 
   @override
-  State<NotificationsSettingsScreen> createState() => _NotificationsSettingsScreenState();
+  State<NotificationsSettingsScreen> createState() =>
+      _NotificationsSettingsScreenState();
 }
 
-class _NotificationsSettingsScreenState extends State<NotificationsSettingsScreen> {
+class _NotificationsSettingsScreenState
+    extends State<NotificationsSettingsScreen> {
   final NotificationService _notificationService = NotificationService();
   final AuthService _authService = AuthService();
 
@@ -22,7 +24,7 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
   int _urgentDays = 3;
   int _warningDays = 7;
 
-  String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'http://localhost:5001';
+  String get baseUrl => AppConfig.baseUrl;
 
   @override
   void initState() {
@@ -278,7 +280,8 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
               _buildSettingCard(
                 icon: Icons.warning_amber_rounded,
                 title: 'Avviso Urgente',
-                subtitle: 'Notifica quando mancano $_urgentDays giorni alla scadenza',
+                subtitle:
+                    'Notifica quando mancano $_urgentDays giorni alla scadenza',
                 trailing: SizedBox(
                   width: 80,
                   child: DropdownButton<int>(
@@ -310,7 +313,8 @@ class _NotificationsSettingsScreenState extends State<NotificationsSettingsScree
               _buildSettingCard(
                 icon: Icons.info_outline,
                 title: 'Avviso Preventivo',
-                subtitle: 'Notifica quando mancano $_warningDays giorni alla scadenza',
+                subtitle:
+                    'Notifica quando mancano $_warningDays giorni alla scadenza',
                 trailing: SizedBox(
                   width: 80,
                   child: DropdownButton<int>(

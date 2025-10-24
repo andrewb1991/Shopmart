@@ -4,7 +4,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/app_config.dart';
 import '../models/inventory_item.dart';
 
 class NotificationService {
@@ -12,10 +12,11 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notifications =
+      FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
-  String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'http://localhost:5001';
+  String get baseUrl => AppConfig.baseUrl;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -26,7 +27,8 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation('Europe/Rome'));
 
       // Configurazione Android
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
 
       // Configurazione iOS
       const iosSettings = DarwinInitializationSettings(
@@ -60,8 +62,9 @@ class NotificationService {
   Future<bool> requestPermissions() async {
     try {
       // Android 13+ richiede permesso runtime
-      final androidPlugin = _notifications.resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin>();
+      final androidPlugin =
+          _notifications.resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>();
 
       if (androidPlugin != null) {
         final granted = await androidPlugin.requestNotificationsPermission();
@@ -154,7 +157,8 @@ class NotificationService {
             UILocalNotificationDateInterpretation.absoluteTime,
       );
 
-      debugPrint('✓ Notifica schedulata: $title per ${scheduledDate.toString()}');
+      debugPrint(
+          '✓ Notifica schedulata: $title per ${scheduledDate.toString()}');
     } catch (e) {
       debugPrint('❌ Errore scheduling notifica: $e');
     }
@@ -201,14 +205,16 @@ class NotificationService {
         // Notifica urgente (es. 3 giorni)
         if (daysLeft <= urgentDays) {
           // Cerca ricette con questo prodotto
-          final recipes = await _fetchRecipesForProduct(product.productName, token);
+          final recipes =
+              await _fetchRecipesForProduct(product.productName, token);
           final recipeText = recipes.isNotEmpty
               ? '\n\nRicette suggerite: ${recipes.take(2).map((r) => r['title']).join(', ')}'
               : '';
 
           await showNotification(
             id: notificationId++,
-            title: '🚨 URGENTE: ${product.productName} scade tra $daysLeft giorni!',
+            title:
+                '🚨 URGENTE: ${product.productName} scade tra $daysLeft giorni!',
             body: 'Usa subito questo prodotto prima che scada.$recipeText',
             payload: 'product:${product.id}',
           );
@@ -216,7 +222,8 @@ class NotificationService {
         // Notifica di avviso (es. 7 giorni)
         else if (daysLeft <= warningDays) {
           // Schedula notifica per 2 giorni prima della scadenza urgente
-          final notificationDate = expiryDate.subtract(Duration(days: urgentDays));
+          final notificationDate =
+              expiryDate.subtract(Duration(days: urgentDays));
 
           if (notificationDate.isAfter(now)) {
             await scheduleNotification(
@@ -293,7 +300,8 @@ class NotificationService {
         payload: 'daily_check',
       );
 
-      debugPrint('✓ Controllo giornaliero schedulato per ${scheduledDate.toString()}');
+      debugPrint(
+          '✓ Controllo giornaliero schedulato per ${scheduledDate.toString()}');
     } catch (e) {
       debugPrint('❌ Errore scheduling controllo giornaliero: $e');
     }

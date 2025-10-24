@@ -3,6 +3,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/app_config.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -16,7 +17,7 @@ class AuthService {
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
 
-  String get baseUrl => dotenv.env['API_BASE_URL'] ?? 'http://localhost:5001';
+  String get baseUrl => AppConfig.baseUrl;
 
   // Registrazione con email e password
   Future<UserModel?> registerWithEmail({

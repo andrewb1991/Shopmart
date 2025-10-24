@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'providers/inventory_provider.dart';
@@ -16,8 +17,10 @@ Future<void> main() async {
 
   // Carica variabili di ambiente
   try {
-    await dotenv.load(fileName: '.env');
-    debugPrint('✅ .env loaded successfully');
+    // Carica .env in sviluppo e .env.production in release builds
+    final envFile = kReleaseMode ? '.env.production' : '.env';
+    await dotenv.load(fileName: envFile);
+    debugPrint('✅ $envFile loaded successfully');
   } catch (e) {
     // Se non trova il file .env, continua comunque
     debugPrint('⚠️ Warning: .env file not found, using default values - $e');

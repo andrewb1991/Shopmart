@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../utils/app_config.dart';
 import '../models/product.dart';
 import '../models/inventory_item.dart';
 import 'auth_service.dart';
@@ -8,8 +8,7 @@ import 'auth_service.dart';
 class ApiService {
   final AuthService _authService = AuthService();
 
-  static String get baseUrl =>
-      dotenv.env['API_URL'] ?? 'http://localhost:5001/api';
+  static String get baseUrl => AppConfig.apiUrl;
 
   // Ottieni headers con token JWT
   Future<Map<String, String>> _getHeaders() async {
@@ -250,12 +249,14 @@ class ApiService {
           'sourceUrl': recipe.sourceUrl,
           'summary': recipe.summary,
           'instructions': recipe.instructions,
-          'ingredients': recipe.ingredients.map((ing) => {
-            'name': ing.name,
-            'amount': ing.amount,
-            'unit': ing.unit,
-            'original': ing.original,
-          }).toList(),
+          'ingredients': recipe.ingredients
+              .map((ing) => {
+                    'name': ing.name,
+                    'amount': ing.amount,
+                    'unit': ing.unit,
+                    'original': ing.original,
+                  })
+              .toList(),
         }),
       );
 
@@ -288,16 +289,16 @@ class ApiService {
         if (data['success'] == true && data['recipes'] != null) {
           return (data['recipes'] as List)
               .map((recipe) => RecipeDetail.fromJson({
-                'id': recipe['recipeId'],
-                'title': recipe['title'],
-                'image': recipe['image'],
-                'servings': recipe['servings'],
-                'readyInMinutes': recipe['readyInMinutes'],
-                'sourceUrl': recipe['sourceUrl'],
-                'summary': recipe['summary'],
-                'instructions': recipe['instructions'],
-                'extendedIngredients': recipe['ingredients'],
-              }))
+                    'id': recipe['recipeId'],
+                    'title': recipe['title'],
+                    'image': recipe['image'],
+                    'servings': recipe['servings'],
+                    'readyInMinutes': recipe['readyInMinutes'],
+                    'sourceUrl': recipe['sourceUrl'],
+                    'summary': recipe['summary'],
+                    'instructions': recipe['instructions'],
+                    'extendedIngredients': recipe['ingredients'],
+                  }))
               .toList();
         }
       }
@@ -357,11 +358,13 @@ class Recipe {
       usedIngredientCount: json['usedIngredientCount'] ?? 0,
       missedIngredientCount: json['missedIngredientCount'] ?? 0,
       usedIngredients: (json['usedIngredients'] as List?)
-          ?.map((e) => e.toString())
-          .toList() ?? [],
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       missedIngredients: (json['missedIngredients'] as List?)
-          ?.map((e) => e.toString())
-          .toList() ?? [],
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 }
@@ -401,8 +404,9 @@ class RecipeDetail {
       summary: json['summary'],
       instructions: json['instructions'],
       ingredients: (json['extendedIngredients'] as List?)
-          ?.map((e) => RecipeIngredient.fromJson(e))
-          .toList() ?? [],
+              ?.map((e) => RecipeIngredient.fromJson(e))
+              .toList() ??
+          [],
     );
   }
 }
