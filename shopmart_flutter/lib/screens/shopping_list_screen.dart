@@ -285,8 +285,11 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: colorScheme.background,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
@@ -302,8 +305,8 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                   letterSpacing: -0.5,
                 ),
               ),
-              backgroundColor: Colors.white.withOpacity(0.7),
-              foregroundColor: Colors.black87,
+              backgroundColor: colorScheme.surface.withOpacity(0.7),
+              foregroundColor: colorScheme.onSurface,
               elevation: 0,
               toolbarHeight: 100,
               actions: [
@@ -423,6 +426,9 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
   }
 
   Widget _buildShoppingItem(InventoryItem item, bool isSelected) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: Material(
@@ -437,18 +443,18 @@ class _ShoppingListScreenState extends State<ShoppingListScreen> {
                 end: Alignment.bottomRight,
                 colors: [
                   isSelected
-                      ? Colors.blue[100]!
-                      : Colors.white.withOpacity(0.9),
+                      ? colorScheme.primaryContainer
+                      : colorScheme.surface.withOpacity(isDark ? 0.8 : 0.9),
                   isSelected
-                      ? Colors.blue[50]!
-                      : Colors.white.withOpacity(0.7),
+                      ? colorScheme.primaryContainer.withOpacity(0.7)
+                      : colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
                 color: isSelected
-                    ? Colors.blue.withOpacity(0.5)
-                    : Colors.white.withOpacity(0.5),
+                    ? colorScheme.primary.withOpacity(0.5)
+                    : colorScheme.surfaceVariant.withOpacity(0.5),
                 width: isSelected ? 2 : 1.5,
               ),
               boxShadow: [

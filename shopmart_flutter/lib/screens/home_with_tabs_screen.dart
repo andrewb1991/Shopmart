@@ -161,6 +161,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
   }
 
   Future<void> _generateRecipes() async {
+    final colorScheme = Theme.of(context).colorScheme;
     final provider = Provider.of<InventoryProvider>(context, listen: false);
     final selectedProducts = provider.inventory
         .where((item) => _selectedProductIds.contains(item.id))
@@ -184,7 +185,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: colorScheme.surface,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -197,7 +198,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: Colors.grey[800],
+                  color: colorScheme.onSurface,
                 ),
               ),
             ],
@@ -255,6 +256,8 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
   Future<void> _editProduct(InventoryItem item) async {
     if (!mounted) return;
 
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: item.productName);
     final brandController = TextEditingController(text: item.brand);
@@ -264,7 +267,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
 
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.5),
+      barrierColor: colorScheme.onSurface.withOpacity(0.5),
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -278,18 +281,18 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Colors.white.withOpacity(0.9),
-                    Colors.white.withOpacity(0.8),
+                    colorScheme.surface.withOpacity(0.9),
+                    colorScheme.surface.withOpacity(0.8),
                   ],
                 ),
                 borderRadius: BorderRadius.circular(28),
                 border: Border.all(
-                  color: Colors.white.withOpacity(0.5),
+                  color: colorScheme.surfaceVariant.withOpacity(0.5),
                   width: 1.5,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.2),
+                    color: colorScheme.onSurface.withOpacity(isDark ? 0.3 : 0.2),
                     blurRadius: 30,
                     spreadRadius: -5,
                   ),
@@ -313,12 +316,12 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                 Container(
                                   padding: const EdgeInsets.all(10),
                                   decoration: BoxDecoration(
-                                    color: Colors.blue.withOpacity(0.1),
+                                    color: colorScheme.primary.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(
                                     Icons.edit_rounded,
-                                    color: Colors.blue[700],
+                                    color: colorScheme.primary,
                                     size: 24,
                                   ),
                                 ),
@@ -385,10 +388,10 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                               child: Container(
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.7),
+                                  color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
                                   borderRadius: BorderRadius.circular(16),
                                   border: Border.all(
-                                    color: Colors.grey.withOpacity(0.3),
+                                    color: colorScheme.onSurfaceVariant.withOpacity(0.3),
                                     width: 1,
                                   ),
                                 ),
@@ -396,7 +399,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                   children: [
                                     Icon(
                                       Icons.calendar_today_rounded,
-                                      color: Colors.grey[700],
+                                      color: colorScheme.onSurfaceVariant,
                                       size: 20,
                                     ),
                                     const SizedBox(width: 12),
@@ -408,16 +411,17 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                             'Data di scadenza',
                                             style: TextStyle(
                                               fontSize: 12,
-                                              color: Colors.grey[600],
+                                              color: colorScheme.onSurfaceVariant,
                                               fontWeight: FontWeight.w500,
                                             ),
                                           ),
                                           const SizedBox(height: 2),
                                           Text(
                                             DateFormat('dd/MM/yyyy').format(selectedDate),
-                                            style: const TextStyle(
+                                            style: TextStyle(
                                               fontSize: 16,
                                               fontWeight: FontWeight.w600,
+                                              color: colorScheme.onSurface,
                                             ),
                                           ),
                                         ],
@@ -425,7 +429,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                     ),
                                     Icon(
                                       Icons.arrow_forward_ios_rounded,
-                                      color: Colors.grey[400],
+                                      color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                                       size: 16,
                                     ),
                                   ],
@@ -440,7 +444,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                     onPressed: () => Navigator.of(context).pop(),
                                     style: TextButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(vertical: 16),
-                                      backgroundColor: Colors.grey.withOpacity(0.1),
+                                      backgroundColor: colorScheme.onSurfaceVariant.withOpacity(0.1),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
                                       ),
@@ -448,7 +452,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                     child: Text(
                                       'Annulla',
                                       style: TextStyle(
-                                        color: Colors.grey[700],
+                                        color: colorScheme.onSurfaceVariant,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -471,15 +475,15 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                     },
                                     style: TextButton.styleFrom(
                                       padding: const EdgeInsets.symmetric(vertical: 16),
-                                      backgroundColor: Colors.blue[700],
+                                      backgroundColor: colorScheme.primary,
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(14),
                                       ),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'Salva',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: colorScheme.onPrimary,
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -541,6 +545,9 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
@@ -548,24 +555,24 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: Colors.grey[600],
+          color: colorScheme.onSurfaceVariant,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
-        prefixIcon: Icon(icon, color: Colors.grey[600], size: 20),
+        prefixIcon: Icon(icon, color: colorScheme.onSurfaceVariant, size: 20),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.7),
+        fillColor: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+          borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.3)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.grey.withOpacity(0.3)),
+          borderSide: BorderSide(color: colorScheme.onSurfaceVariant.withOpacity(0.3)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide(color: Colors.blue[700]!, width: 2),
+          borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
@@ -626,8 +633,11 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: colorScheme.background,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(150),
@@ -636,7 +646,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.7),
+                color: colorScheme.surface.withOpacity(0.7),
               ),
               child: SafeArea(
                 bottom: false,
@@ -649,19 +659,19 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           children: [
-                            const Text(
+                            Text(
                               'In casa',
                               style: TextStyle(
                                 fontWeight: FontWeight.w600,
                                 fontSize: 28,
                                 letterSpacing: -0.5,
-                                color: Colors.black87,
+                                color: colorScheme.onSurface,
                               ),
                             ),
                             const Spacer(),
                             Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.5),
+                                color: colorScheme.surface.withOpacity(0.5),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: IconButton(
@@ -686,10 +696,10 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.5),
+                              color: colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
+                                color: colorScheme.surfaceVariant.withOpacity(0.5),
                                 width: 1.5,
                               ),
                             ),
@@ -700,14 +710,14 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [
-                                    Colors.blue[400]!.withOpacity(0.8),
-                                    Colors.blue[700]!.withOpacity(0.8),
+                                    colorScheme.primary,
+                                    colorScheme.primary.withOpacity(0.8),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.blue.withOpacity(0.3),
+                                    color: colorScheme.primary.withOpacity(0.3),
                                     blurRadius: 10,
                                     spreadRadius: -2,
                                     offset: const Offset(0, 4),
@@ -716,8 +726,8 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                               ),
                               indicatorSize: TabBarIndicatorSize.tab,
                               indicatorPadding: const EdgeInsets.all(4),
-                              labelColor: Colors.white,
-                              unselectedLabelColor: Colors.grey[700],
+                              labelColor: colorScheme.onPrimary,
+                              unselectedLabelColor: colorScheme.onSurfaceVariant,
                               labelStyle: const TextStyle(
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
@@ -760,7 +770,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
               SafeArea(
                 bottom: false,
                 child: Container(
-                  color: const Color(0xFFF5F5F7),
+                  color: colorScheme.background,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   child: Row(
                     children: [
@@ -773,26 +783,26 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
+                                color: colorScheme.surface.withOpacity(isDark ? 0.6 : 0.8),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: colorScheme.surfaceVariant.withOpacity(0.5),
                                   width: 1.5,
                                 ),
                               ),
                               child: PopupMenuButton<SortType>(
                                 icon: Icon(
                                   Icons.filter_list_rounded,
-                                  color: Colors.blue[700],
+                                  color: colorScheme.primary,
                                   size: 24,
                                 ),
-                                color: Colors.white.withOpacity(0.95),
+                                color: colorScheme.surface.withOpacity(0.95),
                                 elevation: 20,
-                                shadowColor: Colors.black.withOpacity(0.2),
+                                shadowColor: colorScheme.onSurface.withOpacity(isDark ? 0.3 : 0.2),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(20),
                                   side: BorderSide(
-                                    color: Colors.white.withOpacity(0.5),
+                                    color: colorScheme.surfaceVariant.withOpacity(0.5),
                                     width: 1.5,
                                   ),
                                 ),
@@ -890,10 +900,10 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.8),
+                                color: colorScheme.surface.withOpacity(isDark ? 0.6 : 0.8),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: colorScheme.surfaceVariant.withOpacity(0.5),
                                   width: 1.5,
                                 ),
                               ),
@@ -907,19 +917,19 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                 decoration: InputDecoration(
                                   hintText: 'Cerca per nome o marca...',
                                   hintStyle: TextStyle(
-                                    color: Colors.grey[600],
+                                    color: colorScheme.onSurfaceVariant,
                                     fontSize: 15,
                                   ),
                                   prefixIcon: Icon(
                                     Icons.search_rounded,
-                                    color: Colors.grey[700],
+                                    color: colorScheme.onSurfaceVariant,
                                     size: 24,
                                   ),
                                   suffixIcon: _searchQuery.isNotEmpty
                                       ? IconButton(
                                           icon: Icon(
                                             Icons.clear_rounded,
-                                            color: Colors.grey[700],
+                                            color: colorScheme.onSurfaceVariant,
                                           ),
                                           onPressed: () {
                                             setState(() {
@@ -947,7 +957,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
 
               // Pulsante "Genera Ricetta" (FISSO - sempre visibile in entrambe le tab)
               Container(
-                color: const Color(0xFFF5F5F7),
+                color: colorScheme.background,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16),
@@ -961,18 +971,18 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                   colors: [
-                                    Colors.white.withOpacity(0.9),
-                                    Colors.white.withOpacity(0.7),
+                                    colorScheme.surface.withOpacity(0.9),
+                                    colorScheme.surface.withOpacity(0.7),
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(16),
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: colorScheme.surfaceVariant.withOpacity(0.5),
                                   width: 1.5,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
+                                    color: colorScheme.onSurface.withOpacity(isDark ? 0.2 : 0.1),
                                     blurRadius: 15,
                                     spreadRadius: -2,
                                     offset: const Offset(0, 6),
@@ -991,7 +1001,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                       },
                                       style: TextButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(vertical: 14),
-                                        backgroundColor: Colors.grey.withOpacity(0.1),
+                                        backgroundColor: colorScheme.onSurfaceVariant.withOpacity(0.1),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
                                         ),
@@ -999,7 +1009,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                       child: Text(
                                         'Annulla',
                                         style: TextStyle(
-                                          color: Colors.grey[700],
+                                          color: colorScheme.onSurfaceVariant,
                                           fontSize: 15,
                                           fontWeight: FontWeight.w600,
                                         ),
@@ -1018,7 +1028,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                       style: TextButton.styleFrom(
                                         padding: const EdgeInsets.symmetric(vertical: 14),
                                         backgroundColor: _selectedProductIds.isEmpty
-                                            ? Colors.grey[300]
+                                            ? colorScheme.onSurfaceVariant.withOpacity(0.3)
                                             : Colors.green[600],
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(12),
@@ -1124,6 +1134,8 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
   }
 
   Widget _buildProductsList(List<InventoryItem> products) {
+    final colorScheme = Theme.of(context).colorScheme;
+
     if (products.isEmpty) {
       return Center(
         child: Column(
@@ -1132,16 +1144,16 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
             Icon(
               _tabController.index == 0 ? Icons.inventory_2_outlined : Icons.check_circle_outline,
               size: 64,
-              color: _tabController.index == 0 ? Colors.grey : Colors.green,
+              color: _tabController.index == 0 ? colorScheme.onSurfaceVariant : Colors.green,
             ),
             const SizedBox(height: 16),
             Text(
               _tabController.index == 0
                   ? 'Nessun prodotto nel magazzino'
                   : 'Nessun prodotto in scadenza',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
-                color: Colors.grey,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
@@ -1149,9 +1161,9 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
               _tabController.index == 0
                   ? 'Inizia ad aggiungere prodotti!'
                   : 'Tutto sotto controllo! 🎉',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Colors.grey,
+                color: colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -1170,14 +1182,14 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
             Icon(
               Icons.search_off_rounded,
               size: 64,
-              color: Colors.grey[400],
+              color: colorScheme.onSurfaceVariant.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
               'Nessun risultato',
               style: TextStyle(
                 fontSize: 18,
-                color: Colors.grey[600],
+                color: colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -1200,6 +1212,9 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
     required String text,
     required bool isSelected,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
@@ -1208,14 +1223,14 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.blue[100]!.withOpacity(0.3),
-                  Colors.blue[50]!.withOpacity(0.2),
+                  colorScheme.primary.withOpacity(isDark ? 0.2 : 0.15),
+                  colorScheme.primary.withOpacity(isDark ? 0.1 : 0.08),
                 ],
               )
             : null,
         border: Border(
           bottom: BorderSide(
-            color: Colors.grey.withOpacity(0.1),
+            color: colorScheme.onSurfaceVariant.withOpacity(0.1),
             width: 1,
           ),
         ),
@@ -1225,7 +1240,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
           Icon(
             icon,
             size: 20,
-            color: isSelected ? Colors.blue[700] : Colors.grey[700],
+            color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
           ),
           const SizedBox(width: 12),
           Text(
@@ -1233,7 +1248,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
             style: TextStyle(
               fontSize: 15,
               fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? Colors.blue[700] : Colors.grey[800],
+              color: isSelected ? colorScheme.primary : colorScheme.onSurface,
             ),
           ),
           if (isSelected) ...[
@@ -1241,7 +1256,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
             Icon(
               Icons.check_rounded,
               size: 20,
-              color: Colors.blue[700],
+              color: colorScheme.primary,
             ),
           ],
         ],
@@ -1250,6 +1265,9 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
   }
 
   Widget _buildInventoryItem(InventoryItem item) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
@@ -1263,13 +1281,13 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  _getStatusColor(item.status).withOpacity(0.3),
-                  Colors.white.withOpacity(0.2),
+                  _getStatusColor(item.status).withOpacity(isDark ? 0.2 : 0.3),
+                  colorScheme.surface.withOpacity(isDark ? 0.3 : 0.2),
                 ],
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: Colors.white.withOpacity(0.5),
+                color: colorScheme.surfaceVariant.withOpacity(0.5),
                 width: 1.5,
               ),
               boxShadow: [
@@ -1306,7 +1324,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                             item.brand,
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -1353,7 +1371,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
+                            color: colorScheme.onSurface.withOpacity(isDark ? 0.2 : 0.1),
                             blurRadius: 10,
                             spreadRadius: -2,
                           ),
@@ -1364,7 +1382,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                         child: Container(
                           width: 100,
                           height: 100,
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           child: item.imageUrl != null
                               ? Image.network(
                                   item.imageUrl!,
@@ -1380,14 +1398,14 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            Colors.grey[100]!,
-                                            Colors.grey[200]!,
+                                            colorScheme.surfaceVariant.withOpacity(0.3),
+                                            colorScheme.surfaceVariant.withOpacity(0.5),
                                           ],
                                         ),
                                       ),
                                       child: Icon(
                                         Icons.shopping_bag_outlined,
-                                        color: Colors.grey[400],
+                                        color: colorScheme.onSurfaceVariant,
                                         size: 48,
                                       ),
                                     );
@@ -1399,14 +1417,14 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                       begin: Alignment.topLeft,
                                       end: Alignment.bottomRight,
                                       colors: [
-                                        Colors.grey[100]!,
-                                        Colors.grey[200]!,
+                                        colorScheme.surfaceVariant.withOpacity(0.3),
+                                        colorScheme.surfaceVariant.withOpacity(0.5),
                                       ],
                                     ),
                                   ),
                                   child: Icon(
                                     Icons.shopping_bag_outlined,
-                                    color: Colors.grey[400],
+                                    color: colorScheme.onSurfaceVariant,
                                     size: 48,
                                   ),
                                 ),
@@ -1425,7 +1443,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                             'Scadenza',
                             style: TextStyle(
                               fontSize: 11,
-                              color: Colors.grey[600],
+                              color: colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
                             ),
@@ -1444,7 +1462,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                 style: TextStyle(
                                   fontSize: 17,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.grey[800],
+                                  color: colorScheme.onSurface,
                                 ),
                               ),
                             ],
@@ -1484,14 +1502,14 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.5),
+                            color: colorScheme.surface.withOpacity(isDark ? 0.3 : 0.5),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             item.ingredients!,
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[800],
+                              color: colorScheme.onSurface,
                               height: 1.5,
                             ),
                           ),
@@ -1522,13 +1540,13 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                             color: Colors.transparent,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: Colors.blue[700]!,
+                              color: colorScheme.primary,
                               width: 2,
                             ),
                           ),
                           child: Icon(
                             Icons.edit_rounded,
-                            color: Colors.blue[700],
+                            color: colorScheme.primary,
                             size: 22,
                           ),
                         ),
@@ -1540,10 +1558,10 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                     // Controlli quantità
                     Container(
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.6),
+                        color: colorScheme.surface.withOpacity(isDark ? 0.4 : 0.6),
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: Colors.white.withOpacity(0.8),
+                          color: colorScheme.surfaceVariant.withOpacity(isDark ? 0.6 : 0.8),
                           width: 1,
                         ),
                       ),
@@ -1573,8 +1591,8 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                 child: Icon(
                                   Icons.remove_rounded,
                                   color: item.quantity > 0
-                                      ? Colors.blue[700]
-                                      : Colors.grey[400],
+                                      ? colorScheme.primary
+                                      : colorScheme.onSurfaceVariant.withOpacity(0.5),
                                   size: 20,
                                 ),
                               ),
@@ -1588,17 +1606,18 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                               children: [
                                 Text(
                                   '${item.quantity}',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                     letterSpacing: -0.5,
+                                    color: colorScheme.onSurface,
                                   ),
                                 ),
                                 Text(
                                   item.unit ?? 'pz',
                                   style: TextStyle(
                                     fontSize: 11,
-                                    color: Colors.grey[600],
+                                    color: colorScheme.onSurfaceVariant,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -1627,7 +1646,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
                                 padding: const EdgeInsets.all(12),
                                 child: Icon(
                                   Icons.add_rounded,
-                                  color: Colors.blue[700],
+                                  color: colorScheme.primary,
                                   size: 20,
                                 ),
                               ),

@@ -63,6 +63,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Widget _buildLiquidGlassBottomBar() {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(left: 12, right: 12, bottom: 20),
       height: 85,
@@ -97,13 +100,13 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Colors.white.withOpacity(0.8),
-                          Colors.white.withOpacity(0.6),
+                          colorScheme.surface.withOpacity(isDark ? 0.85 : 0.9),
+                          colorScheme.surface.withOpacity(isDark ? 0.75 : 0.8),
                         ],
                       ),
                       borderRadius: BorderRadius.circular(30),
                       border: Border.all(
-                        color: Colors.white.withOpacity(0.5),
+                        color: colorScheme.surfaceVariant.withOpacity(0.5),
                         width: 1.5,
                       ),
                     ),
@@ -167,7 +170,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     required String label,
     required int index,
   }) {
+    final colorScheme = Theme.of(context).colorScheme;
     final isSelected = _currentIndex == index;
+
     return Expanded(
       child: Material(
         color: Colors.transparent,
@@ -181,14 +186,14 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               children: [
                 Icon(
                   isSelected ? activeIcon : icon,
-                  color: isSelected ? Colors.blue[700] : Colors.grey[600],
+                  color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                   size: 26,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   label,
                   style: TextStyle(
-                    color: isSelected ? Colors.blue[700] : Colors.grey[600],
+                    color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),
@@ -202,7 +207,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   }
 
   Widget _buildCenterButton() {
+    final colorScheme = Theme.of(context).colorScheme;
     final isSelected = _currentIndex == 2;
+
     return GestureDetector(
       onTap: () => _onNavItemTapped(2),
       child: Container(
@@ -215,30 +222,30 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             end: Alignment.bottomRight,
             colors: isSelected
                 ? [
-                    Colors.blue[400]!,
-                    Colors.blue[700]!,
+                    colorScheme.primary,
+                    colorScheme.primary.withOpacity(0.8),
                   ]
                 : [
-                    Colors.blue[300]!,
-                    Colors.blue[600]!,
+                    colorScheme.primary.withOpacity(0.9),
+                    colorScheme.primary.withOpacity(0.7),
                   ],
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.blue.withOpacity(0.4),
+              color: colorScheme.primary.withOpacity(0.4),
               blurRadius: 20,
               spreadRadius: -2,
               offset: const Offset(0, 8),
             ),
           ],
           border: Border.all(
-            color: Colors.white,
+            color: colorScheme.surface,
             width: 4,
           ),
         ),
         child: Icon(
           isSelected ? Icons.add_circle : Icons.add_circle_outline,
-          color: Colors.white,
+          color: colorScheme.onPrimary,
           size: 32,
         ),
       ),

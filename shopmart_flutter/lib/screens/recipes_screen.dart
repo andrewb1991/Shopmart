@@ -14,8 +14,11 @@ class RecipesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: colorScheme.background,
       extendBodyBehindAppBar: true,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(100),
@@ -31,8 +34,8 @@ class RecipesScreen extends StatelessWidget {
                   letterSpacing: -0.5,
                 ),
               ),
-              backgroundColor: Colors.white.withOpacity(0.7),
-              foregroundColor: Colors.black87,
+              backgroundColor: colorScheme.surface.withOpacity(0.7),
+              foregroundColor: colorScheme.onSurface,
               elevation: 0,
               toolbarHeight: 100,
             ),
@@ -159,6 +162,9 @@ class RecipesScreen extends StatelessWidget {
   }
 
   Widget _buildRecipeCard(BuildContext context, Recipe recipe) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
@@ -177,13 +183,13 @@ class RecipesScreen extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Colors.white.withOpacity(0.9),
-                      Colors.white.withOpacity(0.7),
+                      colorScheme.surface.withOpacity(isDark ? 0.8 : 0.9),
+                      colorScheme.surface.withOpacity(isDark ? 0.6 : 0.7),
                     ],
                   ),
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(
-                    color: Colors.white.withOpacity(0.5),
+                    color: colorScheme.surfaceVariant.withOpacity(0.5),
                     width: 1.5,
                   ),
                   boxShadow: [
