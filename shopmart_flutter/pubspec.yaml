@@ -75,6 +75,9 @@ dependencies:
 
   # Timezone per scheduling notifiche
   timezone: ^0.9.4
+  
+  # Local key-value storage for caching
+  shared_preferences: ^2.1.1
 
 dev_dependencies:
   flutter_test:

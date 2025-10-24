@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../services/api_service.dart';
 
 class SavedRecipesProvider with ChangeNotifier {
@@ -21,6 +23,20 @@ class SavedRecipesProvider with ChangeNotifier {
 
       final recipes = await _apiService.getSavedRecipes();
       _savedRecipes = recipes;
+
+      // If backend returned no recipes (or error), try to load cached recipes
+      if (_savedRecipes.isEmpty) {
+        debugPrint('⚠️ SavedRecipesProvider: backend returned 0 recipes, attempting to load cache');
+        final cached = await _loadCachedRecipes();
+        if (cached.isNotEmpty) {
+          _savedRecipes = cached;
+          debugPrint('✓ Loaded ${_savedRecipes.length} recipes from cache');
+        }
+      } else {
+        // Save to cache the freshly fetched recipes
+        await _saveCachedRecipes(_savedRecipes);
+        debugPrint('✓ Cached ${_savedRecipes.length} recipes locally');
+      }
 
       _isLoading = false;
       notifyListeners();
@@ -48,6 +64,8 @@ class SavedRecipesProvider with ChangeNotifier {
       if (success) {
         // Aggiungi alla lista locale
         _savedRecipes.insert(0, recipe); // Inserisci in testa (più recente)
+        // Aggiorna cache
+        await _saveCachedRecipes(_savedRecipes);
         notifyListeners();
         debugPrint('✓ Ricetta salvata: ${recipe.title}');
         return true;
@@ -70,6 +88,8 @@ class SavedRecipesProvider with ChangeNotifier {
       if (success) {
         // Rimuovi dalla lista locale
         _savedRecipes.removeWhere((r) => r.id == recipeId);
+        // Aggiorna cache
+        await _saveCachedRecipes(_savedRecipes);
         notifyListeners();
         debugPrint('✓ Ricetta rimossa: ID $recipeId');
         return true;
@@ -80,6 +100,53 @@ class SavedRecipesProvider with ChangeNotifier {
     } catch (e) {
       debugPrint('Errore durante la rimozione della ricetta: $e');
       return false;
+    }
+  }
+
+  // --- Local cache helpers (shared_preferences) ---
+  static const String _cacheKey = 'saved_recipes_cache_v1';
+
+  Future<void> _saveCachedRecipes(List<RecipeDetail> recipes) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = recipes
+          .map((r) => {
+                'id': r.id,
+                'title': r.title,
+                'image': r.image,
+                'servings': r.servings,
+                'readyInMinutes': r.readyInMinutes,
+                'sourceUrl': r.sourceUrl,
+                'summary': r.summary,
+                'instructions': r.instructions,
+                'extendedIngredients': r.ingredients
+                    .map((ing) => {
+                          'name': ing.name,
+                          'amount': ing.amount,
+                          'unit': ing.unit,
+                          'original': ing.original,
+                        })
+                    .toList(),
+              })
+          .toList();
+      await prefs.setString(_cacheKey, jsonEncode(list));
+    } catch (e) {
+      debugPrint('Errore salvando cache ricette: $e');
+    }
+  }
+
+  Future<List<RecipeDetail>> _loadCachedRecipes() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final str = prefs.getString(_cacheKey);
+      if (str == null) return [];
+      final list = jsonDecode(str) as List<dynamic>;
+      return list
+          .map((item) => RecipeDetail.fromJson(Map<String, dynamic>.from(item)))
+          .toList();
+    } catch (e) {
+      debugPrint('Errore caricando cache ricette: $e');
+      return [];
     }
   }
 

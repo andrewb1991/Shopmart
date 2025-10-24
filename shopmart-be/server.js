@@ -429,119 +429,334 @@ app.post('/api/recipes/suggest', async (req, res) => {
 // ============================================
 // SCHEMA E MODELLO RICETTE SALVATE
 // ============================================
-const savedRecipeSchema = new mongoose.Schema({
-  recipeId: { type: Number, required: true },
-  userId: { type: String, required: true },
-  title: { type: String, required: true },
-  image: { type: String },
-  servings: { type: Number },
-  readyInMinutes: { type: Number },
-  sourceUrl: { type: String },
-  summary: { type: String },
-  instructions: { type: String },
-  ingredients: [{
-    name: String,
-    amount: Number,
-    unit: String,
-    original: String
-  }],
-  savedAt: { type: Date, default: Date.now }
-}, { timestamps: true });
+// const savedRecipeSchema = new mongoose.Schema({
+//   recipeId: { type: Number, required: true },
+//   userId: { type: String, required: true },
+//   title: { type: String, required: true },
+//   image: { type: String },
+//   servings: { type: Number },
+//   readyInMinutes: { type: Number },
+//   sourceUrl: { type: String },
+//   summary: { type: String },
+//   instructions: { type: String },
+//   ingredients: [{
+//     name: String,
+//     amount: Number,
+//     unit: String,
+//     original: String
+//   }],
+//   savedAt: { type: Date, default: Date.now }
+// }, { timestamps: true });
 
-savedRecipeSchema.index({ recipeId: 1, userId: 1 }, { unique: true });
-const SavedRecipe = mongoose.model('SavedRecipe', savedRecipeSchema);
+// savedRecipeSchema.index({ recipeId: 1, userId: 1 }, { unique: true });
+// const SavedRecipe = mongoose.model('SavedRecipe', savedRecipeSchema);
 
-// ============================================
-// ENDPOINT: Ottieni dettagli ricetta
-// ============================================
-app.get('/api/recipes/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
-    if (!SPOONACULAR_API_KEY) return res.status(500).json({ error: 'API key non configurata' });
+// // ============================================
+// // ENDPOINT: Ottieni dettagli ricetta
+// // ============================================
+// app.get('/api/recipes/:id', async (req, res) => {
+//   try {
+//     const { id } = req.params;
+//     const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
+//     if (!SPOONACULAR_API_KEY) return res.status(500).json({ error: 'API key non configurata' });
 
-    const response = await axios.get(`https://api.spoonacular.com/recipes/${id}/information`, {
-      params: { apiKey: SPOONACULAR_API_KEY, includeNutrition: false }
-    });
+//     const response = await axios.get(`https://api.spoonacular.com/recipes/${id}/information`, {
+//       params: { apiKey: SPOONACULAR_API_KEY, includeNutrition: false }
+//     });
 
-    const recipe = response.data;
-    const recipeDetails = {
-      id: recipe.id,
-      title: recipe.title,
-      image: recipe.image,
-      servings: recipe.servings,
-      readyInMinutes: recipe.readyInMinutes,
-      sourceUrl: recipe.sourceUrl,
-      summary: recipe.summary,
-      instructions: recipe.instructions,
-      extendedIngredients: recipe.extendedIngredients?.map(ing => ({
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        original: ing.original
-      })) || []
-    };
+//     const recipe = response.data;
+//     const recipeDetails = {
+//       id: recipe.id,
+//       title: recipe.title,
+//       image: recipe.image,
+//       servings: recipe.servings,
+//       readyInMinutes: recipe.readyInMinutes,
+//       sourceUrl: recipe.sourceUrl,
+//       summary: recipe.summary,
+//       instructions: recipe.instructions,
+//       extendedIngredients: recipe.extendedIngredients?.map(ing => ({
+//         name: ing.name,
+//         amount: ing.amount,
+//         unit: ing.unit,
+//         original: ing.original
+//       })) || []
+//     };
 
-    res.json({ success: true, recipe: recipeDetails });
-  } catch (err) {
-    console.error('Errore dettagli ricetta:', err.message);
-    res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
+//     res.json({ success: true, recipe: recipeDetails });
+//   } catch (err) {
+//     console.error('Errore dettagli ricetta:', err.message);
+//     res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
+//   }
+// });
+
+// // ============================================
+// // ENDPOINT: Salva ricetta
+// // ============================================
+// app.post('/api/recipes/save', authenticateToken, async (req, res) => {
+//   try {
+//     const { recipeId, title, image, servings, readyInMinutes, sourceUrl, summary, instructions, ingredients } = req.body;
+//     const userId = req.user.id;
+
+//     if (!recipeId || !title) return res.status(400).json({ error: 'recipeId e title sono obbligatori' });
+
+//     const existing = await SavedRecipe.findOne({ recipeId, userId });
+//     if (existing) return res.status(409).json({ error: 'Ricetta già salvata', recipe: existing });
+
+//     const savedRecipe = new SavedRecipe({
+//       recipeId, userId, title, image, servings, readyInMinutes,
+//       sourceUrl, summary, instructions, ingredients: ingredients || []
+//     });
+
+//     await savedRecipe.save();
+//     res.json({ success: true, message: 'Ricetta salvata', recipe: savedRecipe });
+//   } catch (err) {
+//     console.error('Errore salvataggio ricetta:', err.message);
+//     res.status(500).json({ error: 'Errore nel salvataggio della ricetta' });
+//   }
+// });
+
+// // ============================================
+// // ENDPOINT: Ottieni ricette salvate
+// // ============================================
+// app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const savedRecipes = await SavedRecipe.find({ userId }).sort({ savedAt: -1 });
+//     res.json({ success: true, recipes: savedRecipes });
+//   } catch (err) {
+//     console.error('Errore recupero ricette salvate:', err.message);
+//     res.status(500).json({ error: 'Errore nel recupero delle ricette salvate' });
+//   }
+// });
+
+// // ============================================
+// // ENDPOINT: Rimuovi ricetta salvata
+// // ============================================
+// app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) => {
+//   try {
+//     const { recipeId } = req.params;
+//     const userId = req.user.id;
+//     const deletedRecipe = await SavedRecipe.findOneAndDelete({ recipeId: parseInt(recipeId), userId });
+//     if (!deletedRecipe) return res.status(404).json({ error: 'Ricetta non trovata' });
+//     res.json({ success: true, message: 'Ricetta rimossa', recipe: deletedRecipe });
+//   } catch (err) {
+//     console.error('Errore rimozione ricetta:', err.message);
+//     res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
+//   }
+// });
+
+// helper: tenta di ottenere dati da spoonacular ma non fa crashare la route
+async function enrichRecipeFromSpoonacular(recipeId) {
+  const apiKey = process.env.SPOONACULAR_API_KEY;
+  if (!apiKey) {
+    console.warn('SPOONACULAR_API_KEY non settata');
+    return null;
   }
-});
 
-// ============================================
-// ENDPOINT: Salva ricetta
-// ============================================
+  const url = `https://api.spoonacular.com/recipes/${recipeId}/information`;
+  try {
+    const resp = await axios.get(url, {
+      params: { apiKey, includeNutrition: false },
+      timeout: 10000,
+    });
+    if (resp.status === 200 && resp.data) {
+      // opzionale: log quota headers
+      if (resp.headers['x-api-quota-left'] || resp.headers['x-api-quota-used']) {
+        console.info('Spoonacular quota', {
+          used: resp.headers['x-api-quota-used'],
+          left: resp.headers['x-api-quota-left'],
+        });
+      }
+      return resp.data;
+    }
+    return null;
+  } catch (err) {
+    // log compatto per debug (non dumpare tutto)
+    console.error('Spoonacular enrich error', err?.response?.status, err?.response?.data?.message || err.message);
+    return null;
+  }
+}
+
+// =======================
+// SAVE recipe (unchanged ma più difensiva)
+// =======================
 app.post('/api/recipes/save', authenticateToken, async (req, res) => {
   try {
-    const { recipeId, title, image, servings, readyInMinutes, sourceUrl, summary, instructions, ingredients } = req.body;
+    const {
+      recipeId,
+      title,
+      image,
+      servings,
+      readyInMinutes,
+      sourceUrl,
+      summary,
+      instructions,
+      ingredients,
+    } = req.body;
     const userId = req.user.id;
 
-    if (!recipeId || !title) return res.status(400).json({ error: 'recipeId e title sono obbligatori' });
+    // validazione minima
+    if (!recipeId || !title) {
+      return res.status(400).json({ error: 'recipeId e title sono obbligatori' });
+    }
 
-    const existing = await SavedRecipe.findOne({ recipeId, userId });
+    const existing = await SavedRecipe.findOne({ recipeId: parseInt(recipeId, 10), userId }).lean().exec();
     if (existing) return res.status(409).json({ error: 'Ricetta già salvata', recipe: existing });
 
     const savedRecipe = new SavedRecipe({
-      recipeId, userId, title, image, servings, readyInMinutes,
-      sourceUrl, summary, instructions, ingredients: ingredients || []
+      recipeId: parseInt(recipeId, 10),
+      userId,
+      title,
+      image,
+      servings,
+      readyInMinutes,
+      sourceUrl,
+      summary,
+      instructions,
+      ingredients: Array.isArray(ingredients) ? ingredients : [],
     });
 
     await savedRecipe.save();
-    res.json({ success: true, message: 'Ricetta salvata', recipe: savedRecipe });
+    return res.json({ success: true, message: 'Ricetta salvata', recipe: savedRecipe });
   } catch (err) {
-    console.error('Errore salvataggio ricetta:', err.message);
-    res.status(500).json({ error: 'Errore nel salvataggio della ricetta' });
+    console.error('Errore salvataggio ricetta:', err);
+    return res.status(500).json({ error: 'Errore nel salvataggio della ricetta' });
   }
 });
 
-// ============================================
-// ENDPOINT: Ottieni ricette salvate
-// ============================================
+// =======================
+// GET saved recipes (DB-first; no external calls by default)
+// Optional: ?enrich=true -> tenterà di arricchire (ma non farà fallire la lista)
 app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.id;
-    const savedRecipes = await SavedRecipe.find({ userId }).sort({ savedAt: -1 });
-    res.json({ success: true, recipes: savedRecipes });
+    const shouldEnrich = req.query.enrich === 'true';
+
+    // lean() per restituire plain objects
+    const savedRecipes = await SavedRecipe.find({ userId }).sort({ savedAt: -1 }).lean().exec();
+
+    if (!shouldEnrich) {
+      // restituisci payload semplice e consistente
+      const payload = savedRecipes.map(r => ({
+        recipeId: r.recipeId,
+        title: r.title,
+        image: r.image,
+        servings: r.servings,
+        readyInMinutes: r.readyInMinutes,
+        sourceUrl: r.sourceUrl,
+        summary: r.summary,
+        instructions: r.instructions,
+        ingredients: r.ingredients || [],
+        enriched: false,
+      }));
+      return res.json({ success: true, recipes: payload });
+    }
+
+    // enrich in parallelo ma con catch (non farà fallire tutta la route)
+    const enriched = await Promise.all(savedRecipes.map(async (r) => {
+      const ext = await enrichRecipeFromSpoonacular(r.recipeId);
+      if (ext) {
+        return {
+          recipeId: r.recipeId,
+          title: ext.title || r.title,
+          image: ext.image || r.image,
+          servings: ext.servings || r.servings,
+          readyInMinutes: ext.readyInMinutes || r.readyInMinutes,
+          sourceUrl: ext.sourceUrl || r.sourceUrl,
+          summary: ext.summary || r.summary,
+          instructions: ext.instructions || r.instructions,
+          ingredients: ext.extendedIngredients || r.ingredients || [],
+          enriched: true,
+        };
+      } else {
+        return {
+          recipeId: r.recipeId,
+          title: r.title,
+          image: r.image,
+          servings: r.servings,
+          readyInMinutes: r.readyInMinutes,
+          sourceUrl: r.sourceUrl,
+          summary: r.summary,
+          instructions: r.instructions,
+          ingredients: r.ingredients || [],
+          enriched: false,
+        };
+      }
+    }));
+
+    return res.json({ success: true, recipes: enriched });
   } catch (err) {
-    console.error('Errore recupero ricette salvate:', err.message);
-    res.status(500).json({ error: 'Errore nel recupero delle ricette salvate' });
+    console.error('Errore recupero ricette salvate:', err);
+    // rispondi in modo sicuro (meglio restituire 200 con lista vuota che far cadere il client)
+    return res.status(200).json({ success: true, recipes: [] });
   }
 });
 
-// ============================================
-// ENDPOINT: Rimuovi ricetta salvata
-// ============================================
+// =======================
+// GET recipe details (defensive)
+// =======================
+app.get('/api/recipes/:id', authenticateToken, async (req, res) => {
+  try {
+    const recipeId = parseInt(req.params.id, 10);
+
+    // prova a trovare nel DB prima
+    const saved = await SavedRecipe.findOne({ recipeId }).lean().exec();
+    if (saved) {
+      // attempt enrich but fallback to DB-only
+      const ext = await enrichRecipeFromSpoonacular(recipeId);
+      if (ext) {
+        return res.json({ success: true, recipe: {
+          id: ext.id || recipeId,
+          title: ext.title,
+          image: ext.image,
+          servings: ext.servings,
+          readyInMinutes: ext.readyInMinutes,
+          sourceUrl: ext.sourceUrl,
+          summary: ext.summary,
+          instructions: ext.instructions,
+          extendedIngredients: ext.extendedIngredients || saved.ingredients || [],
+          enriched: true,
+        }});
+      } else {
+        return res.json({ success: true, recipe: {
+          id: saved.recipeId,
+          title: saved.title,
+          image: saved.image,
+          servings: saved.servings,
+          readyInMinutes: saved.readyInMinutes,
+          sourceUrl: saved.sourceUrl,
+          summary: saved.summary,
+          instructions: saved.instructions,
+          extendedIngredients: saved.ingredients || [],
+          enriched: false,
+        }});
+      }
+    }
+
+    // not saved -> try external, but catch errors
+    const ext = await enrichRecipeFromSpoonacular(recipeId);
+    if (ext) return res.json({ success: true, recipe: ext });
+    // if external failed, return not found rather than 500
+    return res.status(404).json({ success: false, error: 'Recipe not found' });
+  } catch (err) {
+    console.error('Errore recupero dettaglio ricetta:', err);
+    return res.status(200).json({ success: false, error: 'Errore nel recupero dei dettagli' });
+  }
+});
+
+// =======================
+// DELETE saved (difensiva)
+// =======================
 app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) => {
   try {
-    const { recipeId } = req.params;
+    const recipeId = parseInt(req.params.recipeId, 10);
     const userId = req.user.id;
-    const deletedRecipe = await SavedRecipe.findOneAndDelete({ recipeId: parseInt(recipeId), userId });
+    const deletedRecipe = await SavedRecipe.findOneAndDelete({ recipeId, userId }).lean().exec();
     if (!deletedRecipe) return res.status(404).json({ error: 'Ricetta non trovata' });
-    res.json({ success: true, message: 'Ricetta rimossa', recipe: deletedRecipe });
+    return res.json({ success: true, message: 'Ricetta rimossa', recipe: deletedRecipe });
   } catch (err) {
-    console.error('Errore rimozione ricetta:', err.message);
-    res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
+    console.error('Errore rimozione ricetta:', err);
+    return res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
   }
 });
 

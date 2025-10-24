@@ -13,6 +13,7 @@ class ApiService {
   // Ottieni headers con token JWT
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getToken();
+    print('🔐 ApiService: token present=${token != null}');
     return {
       'Content-Type': 'application/json',
       if (token != null) 'Authorization': 'Bearer $token',
@@ -279,10 +280,20 @@ class ApiService {
   Future<List<RecipeDetail>> getSavedRecipes() async {
     try {
       final headers = await _getHeaders();
+      print('📡 ApiService.getSavedRecipes: headers=$headers');
       final response = await http.get(
         Uri.parse('$baseUrl/recipes/saved'),
         headers: headers,
       );
+
+      print('📡 ApiService.getSavedRecipes: status=${response.statusCode} body=${response.body.length}');
+      if (response.statusCode != 200) {
+        print('📡 ApiService.getSavedRecipes: response body=${response.body}');
+      } else {
+        // Also log body on success for debugging (trim if large)
+        final bodyStr = response.body;
+        print('📡 ApiService.getSavedRecipes: response body (trim)=${bodyStr.length > 1000 ? bodyStr.substring(0, 1000) + "..." : bodyStr}');
+      }
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
