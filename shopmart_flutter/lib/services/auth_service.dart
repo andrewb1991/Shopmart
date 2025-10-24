@@ -10,6 +10,10 @@ class AuthService {
   final GoogleSignIn _googleSignIn = GoogleSignIn(
     scopes: ['email', 'profile'],
     // IMPORTANTE: Sostituisci con il tuo Web Client ID da Google Cloud Console
+    // Provide both clientId and serverClientId when available. Some web
+    // implementations read the clientId meta tag, others prefer the
+    // explicit clientId property. Supplying both is defensive.
+    clientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
     serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
   );
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
