@@ -11,24 +11,39 @@ class SavedRecipesScreen extends StatefulWidget {
   State<SavedRecipesScreen> createState() => _SavedRecipesScreenState();
 }
 
-class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
+class _SavedRecipesScreenState extends State<SavedRecipesScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
   List<Recipe> _searchResults = [];
   bool _isSearching = false;
-  bool _showSavedRecipes = true;
+  // 0 = Le mie ricette, 1 = Ricerca ricette
+  late TabController _tabController;
 
   @override
   void dispose() {
     _searchController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      // When switching to "Le mie ricette" we reset search state
+      if (_tabController.index == 0) {
+        setState(() {
+          _isSearching = false;
+          _searchResults = [];
+          _searchController.clear();
+        });
+      }
+    });
     // Carica le ricette salvate dopo il build iniziale
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final savedProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+      final savedProvider =
+          Provider.of<SavedRecipesProvider>(context, listen: false);
       savedProvider.loadSavedRecipes();
     });
   }
@@ -38,19 +53,20 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
       setState(() {
         _searchResults = [];
         _isSearching = false;
-        _showSavedRecipes = true;
+        // stay on search tab but clear results
       });
       return;
     }
 
     setState(() {
       _isSearching = true;
-      _showSavedRecipes = false;
+      // ensure we are on the search tab
+      if (_tabController.index != 1) _tabController.animateTo(1);
     });
 
     try {
       final apiService = ApiService();
-      // Usa la query come ingrediente per cercare ricette
+      // Usa la query come ingrediente per cercare ricette (chiamata al backend -> eventuale enrichment)
       final recipes = await apiService.suggestRecipes([query]);
 
       if (mounted) {
@@ -89,6 +105,8 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
       );
 
       final apiService = ApiService();
+      // Questa chiamata è permessa solo per ricette cercate (search results).
+      // Caller della funzione deve assicurarsi che venga usata solo dalla tab di ricerca.
       final recipeDetail = await apiService.getRecipeDetails(recipe.id);
 
       if (!mounted) return;
@@ -124,7 +142,8 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
   }
 
   void _showFullRecipeDetailsSheet(RecipeDetail recipe) {
-    final savedRecipesProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+    final savedRecipesProvider =
+        Provider.of<SavedRecipesProvider>(context, listen: false);
 
     showModalBottomSheet(
       context: context,
@@ -215,8 +234,10 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                                       setState(() {
                                         _searchController.clear();
                                         _searchResults = [];
-                                        _showSavedRecipes = true;
                                       });
+                                      // Ritorna alla tab "Le mie ricette"
+                                      if (_tabController.index != 0)
+                                        _tabController.animateTo(0);
                                     },
                                   ),
                                   IconButton(
@@ -239,6 +260,11 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                       ),
                       onChanged: (value) {
                         setState(() {});
+                        // Se l'utente inizia a digitare, passa automaticamente alla tab di ricerca
+                        if (value.trim().isNotEmpty &&
+                            _tabController.index != 1) {
+                          _tabController.animateTo(1);
+                        }
                       },
                     ),
                   ),
@@ -246,15 +272,33 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
               ),
             ),
 
-            // Contenuto
+            // TabBar e contenuto a tab
+            TabBar(
+              controller: _tabController,
+              labelColor: Theme.of(context).colorScheme.primary,
+              unselectedLabelColor:
+                  Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              tabs: const [
+                Tab(text: 'Le mie ricette'),
+                Tab(text: 'Ricerca ricette'),
+              ],
+            ),
+
             Expanded(
-              child: _isSearching
-                  ? const Center(
-                      child: CircularProgressIndicator(),
-                    )
-                  : _showSavedRecipes
-                      ? _buildSavedRecipesList()
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  // Tab 0: Le mie ricette (solo DB)
+                  _isSearching
+                      ? const Center(child: CircularProgressIndicator())
+                      : _buildSavedRecipesList(),
+
+                  // Tab 1: Ricerca ricette (barra di ricerca + risultati)
+                  _isSearching
+                      ? const Center(child: CircularProgressIndicator())
                       : _buildSearchResults(),
+                ],
+              ),
             ),
           ],
         ),
@@ -478,7 +522,8 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen> {
                             mainAxisAlignment: MainAxisAlignment.end,
                             children: [
                               TextButton.icon(
-                                onPressed: () => _showSavedRecipeDetails(recipeDetail),
+                                onPressed: () =>
+                                    _showSavedRecipeDetails(recipeDetail),
                                 icon: const Icon(Icons.arrow_forward_rounded),
                                 label: const Text('Vedi ricetta'),
                                 style: TextButton.styleFrom(
@@ -751,7 +796,8 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
           maxChildSize: 0.95,
           builder: (context, scrollController) {
             return ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(28)),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                 child: Container(
@@ -792,13 +838,15 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                             IconButton(
                               onPressed: () async {
                                 if (isSaved) {
-                                  await savedRecipesProvider.removeRecipe(widget.recipe.id);
+                                  await savedRecipesProvider
+                                      .removeRecipe(widget.recipe.id);
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Row(
                                         children: [
-                                          Icon(Icons.check_circle, color: Colors.white),
+                                          Icon(Icons.check_circle,
+                                              color: Colors.white),
                                           SizedBox(width: 12),
                                           Text('Ricetta rimossa dai salvati'),
                                         ],
@@ -808,13 +856,15 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                     ),
                                   );
                                 } else {
-                                  await savedRecipesProvider.saveRecipe(widget.recipe);
+                                  await savedRecipesProvider
+                                      .saveRecipe(widget.recipe);
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
                                       content: Row(
                                         children: [
-                                          Icon(Icons.check_circle, color: Colors.white),
+                                          Icon(Icons.check_circle,
+                                              color: Colors.white),
                                           SizedBox(width: 12),
                                           Text('Ricetta salvata!'),
                                         ],
@@ -826,11 +876,16 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 }
                               },
                               icon: Icon(
-                                isSaved ? Icons.bookmark : Icons.bookmark_border,
-                                color: isSaved ? Colors.blue[700] : Colors.grey[600],
+                                isSaved
+                                    ? Icons.bookmark
+                                    : Icons.bookmark_border,
+                                color: isSaved
+                                    ? Colors.blue[700]
+                                    : Colors.grey[600],
                                 size: 28,
                               ),
-                              tooltip: isSaved ? 'Rimuovi ricetta' : 'Salva ricetta',
+                              tooltip:
+                                  isSaved ? 'Rimuovi ricetta' : 'Salva ricetta',
                             ),
                           ],
                         ),
@@ -885,17 +940,22 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                               Row(
                                 children: [
                                   if ((widget.recipe.servings ?? 0) > 0) ...[
-                                    Icon(Icons.people, size: 18, color: Colors.grey[600]),
+                                    Icon(Icons.people,
+                                        size: 18, color: Colors.grey[600]),
                                     const SizedBox(width: 4),
                                     Text('${widget.recipe.servings} porzioni',
-                                        style: TextStyle(color: Colors.grey[600])),
+                                        style:
+                                            TextStyle(color: Colors.grey[600])),
                                     const SizedBox(width: 16),
                                   ],
-                                  if ((widget.recipe.readyInMinutes ?? 0) > 0) ...[
-                                    Icon(Icons.timer, size: 18, color: Colors.grey[600]),
+                                  if ((widget.recipe.readyInMinutes ?? 0) >
+                                      0) ...[
+                                    Icon(Icons.timer,
+                                        size: 18, color: Colors.grey[600]),
                                     const SizedBox(width: 4),
                                     Text('${widget.recipe.readyInMinutes} min',
-                                        style: TextStyle(color: Colors.grey[600])),
+                                        style:
+                                            TextStyle(color: Colors.grey[600])),
                                   ],
                                 ],
                               ),
@@ -912,10 +972,12 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                   ),
                                 ),
                                 const SizedBox(height: 12),
-                                ...widget.recipe.ingredients.map((ing) => Padding(
+                                ...widget.recipe.ingredients.map((ing) =>
+                                    Padding(
                                       padding: const EdgeInsets.only(bottom: 8),
                                       child: Row(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Icon(Icons.fiber_manual_record,
                                               size: 8, color: Colors.grey[600]),
@@ -923,7 +985,8 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                           Expanded(
                                             child: Text(
                                               ing.original,
-                                              style: const TextStyle(fontSize: 15),
+                                              style:
+                                                  const TextStyle(fontSize: 15),
                                             ),
                                           ),
                                         ],
@@ -944,8 +1007,8 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 ),
                                 const SizedBox(height: 12),
                                 Text(
-                                  widget.recipe.instructions!
-                                      .replaceAll(RegExp(r'<[^>]*>'), ''), // Rimuovi HTML
+                                  widget.recipe.instructions!.replaceAll(
+                                      RegExp(r'<[^>]*>'), ''), // Rimuovi HTML
                                   style: const TextStyle(
                                     fontSize: 15,
                                     height: 1.6,

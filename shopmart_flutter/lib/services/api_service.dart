@@ -286,13 +286,15 @@ class ApiService {
         headers: headers,
       );
 
-      print('📡 ApiService.getSavedRecipes: status=${response.statusCode} body=${response.body.length}');
+      print(
+          '📡 ApiService.getSavedRecipes: status=${response.statusCode} body=${response.body.length}');
       if (response.statusCode != 200) {
         print('📡 ApiService.getSavedRecipes: response body=${response.body}');
       } else {
         // Also log body on success for debugging (trim if large)
         final bodyStr = response.body;
-        print('📡 ApiService.getSavedRecipes: response body (trim)=${bodyStr.length > 1000 ? bodyStr.substring(0, 1000) + "..." : bodyStr}');
+        print(
+            '📡 ApiService.getSavedRecipes: response body (trim)=${bodyStr.length > 1000 ? bodyStr.substring(0, 1000) + "..." : bodyStr}');
       }
 
       if (response.statusCode == 200) {
@@ -301,24 +303,43 @@ class ApiService {
           return (data['recipes'] as List).map((recipe) {
             // Defensive parsing: saved recipe documents may come from DB (savedrecipes)
             // or from an external enrichment. Normalize fields for RecipeDetail.fromJson.
-            final dynamic rawId = recipe['recipeId'] ?? recipe['id'] ?? recipe['_id'];
+            final dynamic rawId =
+                recipe['recipeId'] ?? recipe['id'] ?? recipe['_id'];
             int parsedId = 0;
-            if (rawId is int) parsedId = rawId;
-            else if (rawId is String) parsedId = int.tryParse(rawId) ?? 0;
+            if (rawId is int)
+              parsedId = rawId;
+            else if (rawId is String)
+              parsedId = int.tryParse(rawId) ?? 0;
             else if (rawId is Map && rawId.containsKey(r"\$numberInt")) {
               parsedId = int.tryParse(rawId[r"\$numberInt"].toString()) ?? 0;
             }
 
             final title = recipe['title'] ?? recipe['name'] ?? '';
-            final image = recipe['image'] ?? recipe['imageUrl'] ?? recipe['thumbnail'] ?? null;
-            final servings = recipe['servings'] is int ? recipe['servings'] : (recipe['servings'] != null ? int.tryParse(recipe['servings'].toString()) : null);
-            final readyInMinutes = recipe['readyInMinutes'] is int ? recipe['readyInMinutes'] : (recipe['readyInMinutes'] != null ? int.tryParse(recipe['readyInMinutes'].toString()) : null);
-            final sourceUrl = recipe['sourceUrl'] ?? recipe['source_url'] ?? recipe['source'] ?? null;
+            final image = recipe['image'] ??
+                recipe['imageUrl'] ??
+                recipe['thumbnail'] ??
+                null;
+            final servings = recipe['servings'] is int
+                ? recipe['servings']
+                : (recipe['servings'] != null
+                    ? int.tryParse(recipe['servings'].toString())
+                    : null);
+            final readyInMinutes = recipe['readyInMinutes'] is int
+                ? recipe['readyInMinutes']
+                : (recipe['readyInMinutes'] != null
+                    ? int.tryParse(recipe['readyInMinutes'].toString())
+                    : null);
+            final sourceUrl = recipe['sourceUrl'] ??
+                recipe['source_url'] ??
+                recipe['source'] ??
+                null;
             final summary = recipe['summary'] ?? recipe['description'] ?? null;
-            final instructions = recipe['instructions'] ?? recipe['instruction'] ?? null;
+            final instructions =
+                recipe['instructions'] ?? recipe['instruction'] ?? null;
 
             // Ingredients may be stored as 'ingredients' (DB) or 'extendedIngredients' (spoonacular)
-            final rawIngredients = recipe['ingredients'] ?? recipe['extendedIngredients'] ?? [];
+            final rawIngredients =
+                recipe['ingredients'] ?? recipe['extendedIngredients'] ?? [];
             List<dynamic> ingredientsList = [];
             if (rawIngredients is List) ingredientsList = rawIngredients;
 

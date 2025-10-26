@@ -46,7 +46,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     // If navigating to Saved Recipes, trigger a refresh of saved recipes
     if (index == 1) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        final savedProvider = Provider.of<SavedRecipesProvider>(context, listen: false);
+        final savedProvider =
+            Provider.of<SavedRecipesProvider>(context, listen: false);
         savedProvider.loadSavedRecipes();
       });
     }
@@ -195,14 +196,18 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               children: [
                 Icon(
                   isSelected ? activeIcon : icon,
-                  color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                  color: isSelected
+                      ? colorScheme.primary
+                      : colorScheme.onSurfaceVariant,
                   size: 26,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   label,
                   style: TextStyle(
-                    color: isSelected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+                    color: isSelected
+                        ? colorScheme.primary
+                        : colorScheme.onSurfaceVariant,
                     fontSize: 11,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
                   ),

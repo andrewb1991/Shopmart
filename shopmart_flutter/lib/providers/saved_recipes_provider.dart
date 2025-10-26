@@ -26,7 +26,8 @@ class SavedRecipesProvider with ChangeNotifier {
 
       // If backend returned no recipes (or error), try to load cached recipes
       if (_savedRecipes.isEmpty) {
-        debugPrint('⚠️ SavedRecipesProvider: backend returned 0 recipes, attempting to load cache');
+        debugPrint(
+            '⚠️ SavedRecipesProvider: backend returned 0 recipes, attempting to load cache');
         final cached = await _loadCachedRecipes();
         if (cached.isNotEmpty) {
           _savedRecipes = cached;
@@ -41,7 +42,8 @@ class SavedRecipesProvider with ChangeNotifier {
       _isLoading = false;
       notifyListeners();
 
-      debugPrint('✓ Caricate ${_savedRecipes.length} ricette salvate dal backend');
+      debugPrint(
+          '✓ Caricate ${_savedRecipes.length} ricette salvate dal backend');
     } catch (e) {
       _isLoading = false;
       notifyListeners();
