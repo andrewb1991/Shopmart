@@ -78,6 +78,7 @@ dependencies:
   
   # Local key-value storage for caching
   shared_preferences: ^2.1.1
+  deepl_dart: ^2.0.0
 
 dev_dependencies:
   flutter_test:

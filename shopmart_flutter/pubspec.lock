@@ -161,6 +161,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.11"
+  deepl_dart:
+    dependency: "direct main"
+    description:
+      name: deepl_dart
+      sha256: "3959b1a9c80766172102d4f90ad9afbfea374a78b026341c2747b5a4ca051a22"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   fake_async:
     dependency: transitive
     description:
@@ -786,6 +794,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.4.0"
+  universal_io:
+    dependency: transitive
+    description:
+      name: universal_io
+      sha256: "1722b2dcc462b4b2f3ee7d188dad008b6eb4c40bbd03a3de451d82c78bba9aad"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.2"
   url_launcher_linux:
     dependency: transitive
     description:
