@@ -690,11 +690,66 @@ class _RecipeDetailSheet extends StatefulWidget {
 }
 
 class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
+  late RecipeDetail _originalRecipe;
+  RecipeDetail? _translatedRecipe;
+  bool _showTranslated = true; // Mostra tradotto di default
+  bool _isTranslating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _originalRecipe = widget.recipe;
+    _translateRecipe();
+  }
+
+  Future<void> _translateRecipe() async {
+    setState(() {
+      _isTranslating = true;
+    });
+
+    try {
+      final apiService = ApiService();
+      final translated = await apiService.translateRecipeDetail(_originalRecipe);
+
+      if (mounted) {
+        setState(() {
+          _translatedRecipe = translated ?? _originalRecipe;
+          _isTranslating = false;
+        });
+      }
+    } catch (e) {
+      print('Errore traduzione RecipeDetail: $e');
+      if (mounted) {
+        setState(() {
+          _isTranslating = false;
+          // In caso di errore, usa la ricetta originale
+          _translatedRecipe = _originalRecipe;
+        });
+      }
+    }
+  }
+
+  void _toggleLanguage() {
+    setState(() {
+      _showTranslated = !_showTranslated;
+    });
+  }
+
+  RecipeDetail get _displayedRecipe {
+    if (_isTranslating || _translatedRecipe == null) {
+      return _originalRecipe;
+    }
+    return _showTranslated ? _translatedRecipe! : _originalRecipe;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<SavedRecipesProvider>(
       builder: (context, savedRecipesProvider, child) {
-        final isSaved = savedRecipesProvider.isRecipeSaved(widget.recipe.id);
+        final isSaved = savedRecipesProvider.isRecipeSaved(_originalRecipe.id);
 
         return DraggableScrollableSheet(
           initialChildSize: 0.9,
@@ -721,7 +776,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                   ),
                   child: Column(
                     children: [
-                      // Handle e pulsante Salva
+                      // Handle e pulsanti Toggle/Salva
                       Container(
                         padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
                         child: Row(
@@ -739,11 +794,32 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 ),
                               ),
                             ),
+                            // Pulsante toggle lingua
+                            if (_translatedRecipe != null && !_isTranslating)
+                              IconButton(
+                                icon: Icon(
+                                  _showTranslated ? Icons.language : Icons.translate_outlined,
+                                  size: 24,
+                                ),
+                                tooltip: _showTranslated ? 'Mostra originale' : 'Mostra tradotto',
+                                onPressed: _toggleLanguage,
+                                color: colorScheme.primary,
+                              ),
+                            // Indicatore di traduzione
+                            if (_isTranslating)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 12),
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
                             // Pulsante Salva/Rimuovi in alto a destra
                             IconButton(
                               onPressed: () async {
                                 if (isSaved) {
-                                  await savedRecipesProvider.removeRecipe(widget.recipe.id);
+                                  await savedRecipesProvider.removeRecipe(_originalRecipe.id);
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -759,7 +835,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                     ),
                                   );
                                 } else {
-                                  await savedRecipesProvider.saveRecipe(widget.recipe);
+                                  await savedRecipesProvider.saveRecipe(_originalRecipe);
                                   if (!context.mounted) return;
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -796,11 +872,11 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             // Immagine
-                            if (widget.recipe.image != null)
+                            if (_displayedRecipe.image != null)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
                                 child: Image.network(
-                                  ApiService.getProxiedImageUrl(widget.recipe.image),
+                                  ApiService.getProxiedImageUrl(_displayedRecipe.image),
                                   width: double.infinity,
                                   height: 250,
                                   fit: BoxFit.cover,
@@ -822,7 +898,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
 
                             // Titolo
                             Text(
-                              widget.recipe.title,
+                              _displayedRecipe.title,
                               style: const TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w700,
@@ -835,17 +911,17 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                             // Info rapide
                             Row(
                               children: [
-                                if (widget.recipe.servings != null) ...[
+                                if (_displayedRecipe.servings != null) ...[
                                   Icon(Icons.people, size: 18, color: Colors.grey[600]),
                                   const SizedBox(width: 4),
-                                  Text('${widget.recipe.servings} porzioni',
+                                  Text('${_displayedRecipe.servings} porzioni',
                                       style: TextStyle(color: Colors.grey[600])),
                                   const SizedBox(width: 16),
                                 ],
-                                if (widget.recipe.readyInMinutes != null) ...[
+                                if (_displayedRecipe.readyInMinutes != null) ...[
                                   Icon(Icons.timer, size: 18, color: Colors.grey[600]),
                                   const SizedBox(width: 4),
-                                  Text('${widget.recipe.readyInMinutes} min',
+                                  Text('${_displayedRecipe.readyInMinutes} min',
                                       style: TextStyle(color: Colors.grey[600])),
                                 ],
                               ],
@@ -854,7 +930,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                             const SizedBox(height: 24),
 
                             // Ingredienti
-                            if (widget.recipe.ingredients.isNotEmpty) ...[
+                            if (_displayedRecipe.ingredients.isNotEmpty) ...[
                               const Text(
                                 'Ingredienti:',
                                 style: TextStyle(
@@ -863,7 +939,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 ),
                               ),
                               const SizedBox(height: 12),
-                              ...widget.recipe.ingredients.map((ing) => Padding(
+                              ..._displayedRecipe.ingredients.map((ing) => Padding(
                                     padding: const EdgeInsets.only(bottom: 8),
                                     child: Row(
                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -884,8 +960,8 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                             ],
 
                             // Istruzioni
-                            if (widget.recipe.instructions != null &&
-                                widget.recipe.instructions!.isNotEmpty) ...[
+                            if (_displayedRecipe.instructions != null &&
+                                _displayedRecipe.instructions!.isNotEmpty) ...[
                               const Text(
                                 'Preparazione:',
                                 style: TextStyle(
@@ -895,7 +971,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                               ),
                               const SizedBox(height: 12),
                               Text(
-                                widget.recipe.instructions!
+                                _displayedRecipe.instructions!
                                     .replaceAll(RegExp(r'<[^>]*>'), ''), // Rimuovi HTML
                                 style: const TextStyle(
                                   fontSize: 15,

@@ -195,6 +195,68 @@ class ApiService {
     }
   }
 
+  // Traduci RecipeDetail completo dall'inglese all'italiano usando DeepL
+  Future<RecipeDetail?> translateRecipeDetail(RecipeDetail recipe) async {
+    try {
+      // Converti RecipeDetail in formato JSON
+      final recipeJson = {
+        'id': recipe.id,
+        'title': recipe.title,
+        'image': recipe.image,
+        'servings': recipe.servings,
+        'readyInMinutes': recipe.readyInMinutes,
+        'sourceUrl': recipe.sourceUrl,
+        'summary': recipe.summary,
+        'instructions': recipe.instructions,
+        'ingredients': recipe.ingredients.map((ing) => {
+          'name': ing.name,
+          'amount': ing.amount,
+          'unit': ing.unit,
+          'original': ing.original,
+        }).toList(),
+      };
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipes/translate-recipe-detail'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'recipe': recipeJson}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['recipe'] != null) {
+          final translatedRecipe = data['recipe'];
+
+          // Ricostruisci RecipeDetail dalla risposta
+          return RecipeDetail(
+            id: translatedRecipe['id'],
+            title: translatedRecipe['title'],
+            image: translatedRecipe['image'],
+            servings: translatedRecipe['servings'],
+            readyInMinutes: translatedRecipe['readyInMinutes'],
+            sourceUrl: translatedRecipe['sourceUrl'],
+            summary: translatedRecipe['summary'],
+            instructions: translatedRecipe['instructions'],
+            ingredients: (translatedRecipe['ingredients'] as List?)
+                ?.map((ing) => RecipeIngredient(
+                  name: ing['name'] ?? '',
+                  amount: ing['amount']?.toDouble(),
+                  unit: ing['unit'],
+                  original: ing['original'] ?? '',
+                ))
+                .toList() ?? [],
+          );
+        }
+      }
+      // In caso di errore, restituisci null
+      return null;
+    } catch (e) {
+      print('Errore durante la traduzione del RecipeDetail: $e');
+      // In caso di errore, restituisci null
+      return null;
+    }
+  }
+
   // Traduci dati ricette dall'inglese all'italiano usando DeepL
   Future<List<Recipe>> translateRecipeData(List<Recipe> recipes) async {
     try {
