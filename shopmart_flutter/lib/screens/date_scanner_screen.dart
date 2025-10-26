@@ -226,6 +226,20 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
 
   Future<void> _processImageFile(String imagePath) async {
     try {
+      // Su web, l'OCR non è disponibile - mostra messaggio
+      if (kIsWeb) {
+        setState(() {
+          _isProcessing = false;
+          _detectedText = 'OCR non disponibile su web. Usa l\'inserimento manuale.';
+        });
+        // Attendi 2 secondi e poi chiudi
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) {
+          Navigator.of(context).pop(null);
+        }
+        return;
+      }
+
       final inputImage = InputImage.fromFilePath(imagePath);
 
       final RecognizedText recognizedText =
@@ -488,7 +502,7 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(
-              Icons.camera_alt,
+              Icons.edit_calendar,
               size: 100,
               color: Colors.blue,
             ),
@@ -500,7 +514,7 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
                 child: Column(
                   children: [
                     const Text(
-                      'Scansiona la data di scadenza',
+                      'Inserisci la data di scadenza',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -508,13 +522,28 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 16),
-                    const Text(
-                      'Scatta una foto della data di scadenza stampata sul prodotto',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange.shade200),
                       ),
-                      textAlign: TextAlign.center,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.info_outline, color: Colors.orange),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'La scansione automatica non è disponibile su web. Inserisci manualmente la data.',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.black87,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 24),
                     const Text(
@@ -538,43 +567,20 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
               ),
             ),
             const SizedBox(height: 32),
-            if (_isProcessing)
-              const Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Riconoscimento in corso...'),
-                ],
-              )
-            else ...[
-              ElevatedButton.icon(
-                onPressed: _processImage,
-                icon: const Icon(Icons.camera_alt),
-                label: const Text('Scatta foto'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                  textStyle: const TextStyle(fontSize: 16),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).pop(null),
+              icon: const Icon(Icons.edit_calendar),
+              label: const Text('Inserisci data manualmente'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 32,
+                  vertical: 16,
                 ),
+                textStyle: const TextStyle(fontSize: 16),
               ),
-              const SizedBox(height: 16),
-              TextButton.icon(
-                onPressed: () => Navigator.of(context).pop(null),
-                icon: const Icon(Icons.edit_calendar),
-                label: const Text('Inserimento manuale'),
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.blue,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 16,
-                  ),
-                ),
-              ),
-            ],
+            ),
             const SizedBox(height: 32),
             if (_detectedText.isNotEmpty)
               Card(
