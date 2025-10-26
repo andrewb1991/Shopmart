@@ -194,7 +194,7 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(
-                'Cercando ricette...',
+                'Traducendo ingredienti...',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
@@ -209,7 +209,45 @@ class _HomeWithTabsScreenState extends State<HomeWithTabsScreen>
 
     try {
       final apiService = ApiService();
-      final recipes = await apiService.suggestRecipes(selectedProducts);
+
+      // Traduci gli ingredienti dall'italiano all'inglese
+      final translatedProducts = await apiService.translateIngredientsToEnglish(selectedProducts);
+
+      if (!mounted) return;
+
+      // Aggiorna il messaggio del dialog
+      Navigator.pop(context);
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: colorScheme.surface,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 16),
+                Text(
+                  'Cercando ricette...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Cerca ricette usando gli ingredienti tradotti
+      final recipes = await apiService.suggestRecipes(translatedProducts);
 
       if (!mounted) return;
 

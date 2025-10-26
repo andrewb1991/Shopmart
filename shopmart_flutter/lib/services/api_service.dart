@@ -195,6 +195,32 @@ class ApiService {
     }
   }
 
+  // Traduci ingredienti dall'italiano all'inglese usando DeepL
+  Future<List<String>> translateIngredientsToEnglish(List<String> ingredients) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipes/translate-ingredients'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'ingredients': ingredients}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['translatedIngredients'] != null) {
+          return (data['translatedIngredients'] as List)
+              .map((ing) => ing.toString())
+              .toList();
+        }
+      }
+      // In caso di errore, restituisci gli ingredienti originali
+      return ingredients;
+    } catch (e) {
+      print('Errore durante la traduzione degli ingredienti: $e');
+      // In caso di errore, restituisci gli ingredienti originali
+      return ingredients;
+    }
+  }
+
   // Suggerisci ricette basate su ingredienti
   Future<List<Recipe>> suggestRecipes(List<String> ingredients) async {
     try {

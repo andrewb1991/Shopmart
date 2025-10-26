@@ -841,6 +841,73 @@ app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) =
 });
 
 // ============================================
+// ENDPOINT: Traduci ingredienti dall'italiano all'inglese con DeepL
+// ============================================
+app.post('/api/recipes/translate-ingredients', async (req, res) => {
+  try {
+    const { ingredients } = req.body;
+
+    if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) {
+      return res.status(400).json({ error: 'Ingredienti richiesti (array)' });
+    }
+
+    const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
+    if (!DEEPL_API_KEY) {
+      return res.status(500).json({ error: 'DeepL API key non configurata' });
+    }
+
+    console.log(`🌍 Traduzione ingredienti IT->EN: ${ingredients.join(', ')}`);
+
+    // Helper per tradurre un singolo ingrediente
+    async function translateIngredient(text, targetLang = 'EN') {
+      if (!text || text.trim() === '') return text;
+
+      try {
+        const response = await axios.post(
+          'https://api-free.deepl.com/v2/translate',
+          new URLSearchParams({
+            auth_key: DEEPL_API_KEY,
+            text: text,
+            target_lang: targetLang
+          }),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 10000
+          }
+        );
+
+        if (response.data && response.data.translations && response.data.translations[0]) {
+          return response.data.translations[0].text;
+        }
+        return text;
+      } catch (err) {
+        console.error('Errore traduzione DeepL:', err.message);
+        return text; // Fallback al testo originale
+      }
+    }
+
+    // Traduci tutti gli ingredienti in parallelo
+    const translatedIngredients = await Promise.all(
+      ingredients.map(async (ingredient) => {
+        const translated = await translateIngredient(ingredient, 'EN');
+        return translated;
+      })
+    );
+
+    console.log(`✓ Ingredienti tradotti: ${translatedIngredients.join(', ')}`);
+
+    return res.json({
+      success: true,
+      originalIngredients: ingredients,
+      translatedIngredients: translatedIngredients
+    });
+  } catch (err) {
+    console.error('Errore traduzione ingredienti:', err);
+    return res.status(500).json({ error: 'Errore durante la traduzione degli ingredienti' });
+  }
+});
+
+// ============================================
 // ENDPOINT: Traduci ricetta in italiano con DeepL
 // ============================================
 app.post('/api/recipes/translate', authenticateToken, async (req, res) => {
