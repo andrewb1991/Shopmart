@@ -518,32 +518,32 @@ app.post('/api/recipes/save', authenticateToken, async (req, res) => {
 // ============================================
 // ENDPOINT: Ottieni ricette salvate
 // ============================================
-app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
-  try {
-    const userId = req.user.id;
-    const savedRecipes = await SavedRecipe.find({ userId }).sort({ savedAt: -1 });
-    res.json({ success: true, recipes: savedRecipes });
-  } catch (err) {
-    console.error('Errore recupero ricette salvate:', err.message);
-    res.status(500).json({ error: 'Errore nel recupero delle ricette salvate' });
-  }
-});
+// app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
+//   try {
+//     const userId = req.user.id;
+//     const savedRecipes = await SavedRecipe.find({ userId }).sort({ savedAt: -1 });
+//     res.json({ success: true, recipes: savedRecipes });
+//   } catch (err) {
+//     console.error('Errore recupero ricette salvate:', err.message);
+//     res.status(500).json({ error: 'Errore nel recupero delle ricette salvate' });
+//   }
+// });
 
 // ============================================
 // ENDPOINT: Rimuovi ricetta salvata
 // ============================================
-app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) => {
-  try {
-    const { recipeId } = req.params;
-    const userId = req.user.id;
-    const deletedRecipe = await SavedRecipe.findOneAndDelete({ recipeId: parseInt(recipeId), userId });
-    if (!deletedRecipe) return res.status(404).json({ error: 'Ricetta non trovata' });
-    res.json({ success: true, message: 'Ricetta rimossa', recipe: deletedRecipe });
-  } catch (err) {
-    console.error('Errore rimozione ricetta:', err.message);
-    res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
-  }
-});
+// app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) => {
+//   try {
+//     const { recipeId } = req.params;
+//     const userId = req.user.id;
+//     const deletedRecipe = await SavedRecipe.findOneAndDelete({ recipeId: parseInt(recipeId), userId });
+//     if (!deletedRecipe) return res.status(404).json({ error: 'Ricetta non trovata' });
+//     res.json({ success: true, message: 'Ricetta rimossa', recipe: deletedRecipe });
+//   } catch (err) {
+//     console.error('Errore rimozione ricetta:', err.message);
+//     res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
+//   }
+// });
 
 // helper: tenta di ottenere dati da spoonacular ma non fa crashare la route
 async function enrichRecipeFromSpoonacular(recipeId) {
