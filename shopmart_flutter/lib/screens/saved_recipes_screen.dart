@@ -272,16 +272,70 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen>
               ),
             ),
 
-            // TabBar e contenuto a tab
-            TabBar(
-              controller: _tabController,
-              labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor:
-                  Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              tabs: const [
-                Tab(text: 'Le mie ricette'),
-                Tab(text: 'Ricerca ricette'),
-              ],
+            // TabBar con stile liquid glass (come "In casa")
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface.withOpacity(
+                          Theme.of(context).brightness == Brightness.dark
+                              ? 0.6
+                              : 0.7),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colorScheme.surfaceVariant.withOpacity(0.5),
+                        width: 1.5,
+                      ),
+                    ),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            colorScheme.primary,
+                            colorScheme.primary.withOpacity(0.8),
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: colorScheme.primary.withOpacity(0.3),
+                            blurRadius: 10,
+                            spreadRadius: -2,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      indicatorPadding: const EdgeInsets.all(4),
+                      labelColor: colorScheme.onPrimary,
+                      unselectedLabelColor: colorScheme.onSurfaceVariant,
+                      labelStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.3,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: -0.3,
+                      ),
+                      dividerColor: Colors.transparent,
+                      overlayColor: WidgetStateProperty.all(Colors.transparent),
+                      tabs: const [
+                        Tab(text: 'Le mie ricette'),
+                        Tab(text: 'Ricerca ricette'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
 
             Expanded(
@@ -786,6 +840,9 @@ class _RecipeDetailSheet extends StatefulWidget {
 class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Consumer<SavedRecipesProvider>(
       builder: (context, savedRecipesProvider, child) {
         final isSaved = savedRecipesProvider.isRecipeSaved(widget.recipe.id);
@@ -806,8 +863,8 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Colors.white.withOpacity(0.95),
-                        Colors.white.withOpacity(0.85),
+                        colorScheme.surface.withOpacity(isDark ? 0.95 : 0.95),
+                        colorScheme.surface.withOpacity(isDark ? 0.85 : 0.85),
                       ],
                     ),
                     borderRadius: const BorderRadius.vertical(
@@ -828,7 +885,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                   width: 40,
                                   height: 4,
                                   decoration: BoxDecoration(
-                                    color: Colors.grey[300],
+                                    color: colorScheme.onSurfaceVariant.withOpacity(0.3),
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
@@ -881,7 +938,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                     : Icons.bookmark_border,
                                 color: isSaved
                                     ? Colors.blue[700]
-                                    : Colors.grey[600],
+                                    : colorScheme.onSurfaceVariant,
                                 size: 28,
                               ),
                               tooltip:
@@ -911,11 +968,11 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                     errorBuilder: (context, error, stackTrace) {
                                       return Container(
                                         height: 250,
-                                        color: Colors.grey[200],
+                                        color: colorScheme.surfaceVariant.withOpacity(0.3),
                                         child: Icon(
                                           Icons.restaurant,
                                           size: 64,
-                                          color: Colors.grey[400],
+                                          color: colorScheme.onSurfaceVariant.withOpacity(0.5),
                                         ),
                                       );
                                     },
@@ -941,21 +998,21 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 children: [
                                   if ((widget.recipe.servings ?? 0) > 0) ...[
                                     Icon(Icons.people,
-                                        size: 18, color: Colors.grey[600]),
+                                        size: 18, color: colorScheme.onSurfaceVariant),
                                     const SizedBox(width: 4),
                                     Text('${widget.recipe.servings} porzioni',
                                         style:
-                                            TextStyle(color: Colors.grey[600])),
+                                            TextStyle(color: colorScheme.onSurfaceVariant)),
                                     const SizedBox(width: 16),
                                   ],
                                   if ((widget.recipe.readyInMinutes ?? 0) >
                                       0) ...[
                                     Icon(Icons.timer,
-                                        size: 18, color: Colors.grey[600]),
+                                        size: 18, color: colorScheme.onSurfaceVariant),
                                     const SizedBox(width: 4),
                                     Text('${widget.recipe.readyInMinutes} min',
                                         style:
-                                            TextStyle(color: Colors.grey[600])),
+                                            TextStyle(color: colorScheme.onSurfaceVariant)),
                                   ],
                                 ],
                               ),
@@ -980,7 +1037,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Icon(Icons.fiber_manual_record,
-                                              size: 8, color: Colors.grey[600]),
+                                              size: 8, color: colorScheme.onSurfaceVariant),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: Text(

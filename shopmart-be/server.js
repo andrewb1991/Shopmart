@@ -723,15 +723,65 @@ app.get('/api/recipes/image-proxy', async (req, res) => {
 // =======================
 // GET recipe details (defensive)
 // =======================
-app.get('/api/recipes/:id', authenticateToken, async (req, res) => {
+// app.get('/api/recipes/:id', authenticateToken, async (req, res) => {
+//   try {
+//     const recipeId = parseInt(req.params.id, 10);
+//     const userId = req.user.id;
+
+//     // prova a trovare nel DB prima (SOLO per l'utente corrente)
+//     const saved = await SavedRecipe.findOne({ recipeId, userId }).lean().exec();
+//     if (saved) {
+//       // attempt enrich but fallback to DB-only
+//       const ext = await enrichRecipeFromSpoonacular(recipeId);
+//       if (ext) {
+//         return res.json({ success: true, recipe: {
+//           id: ext.id || recipeId,
+//           title: ext.title,
+//           image: ext.image,
+//           servings: ext.servings,
+//           readyInMinutes: ext.readyInMinutes,
+//           sourceUrl: ext.sourceUrl,
+//           summary: ext.summary,
+//           instructions: ext.instructions,
+//           extendedIngredients: ext.extendedIngredients || saved.ingredients || [],
+//           enriched: true,
+//         }});
+//       } else {
+//         return res.json({ success: true, recipe: {
+//           id: saved.recipeId,
+//           title: saved.title,
+//           image: saved.image,
+//           servings: saved.servings,
+//           readyInMinutes: saved.readyInMinutes,
+//           sourceUrl: saved.sourceUrl,
+//           summary: saved.summary,
+//           instructions: saved.instructions,
+//           extendedIngredients: saved.ingredients || [],
+//           enriched: false,
+//         }});
+//       }
+//     }
+
+//     // not saved -> try external, but catch errors
+//     const ext = await enrichRecipeFromSpoonacular(recipeId);
+//     if (ext) return res.json({ success: true, recipe: ext });
+//     // if external failed, return not found rather than 500
+//     return res.status(404).json({ success: false, error: 'Recipe not found' });
+//   } catch (err) {
+//     console.error('Errore recupero dettaglio ricetta:', err);
+//     return res.status(200).json({ success: false, error: 'Errore nel recupero dei dettagli' });
+//   }
+// });
+
+// Get recipe details (public). We first try DB (if saved), then external. Non-blocking: do not throw 500 due to provider.
+app.get('/api/recipes/:id', async (req, res) => {
   try {
     const recipeId = parseInt(req.params.id, 10);
-    const userId = req.user.id;
+    if (Number.isNaN(recipeId)) return res.status(400).json({ success: false, error: 'ID ricetta non valido' });
 
-    // prova a trovare nel DB prima (SOLO per l'utente corrente)
-    const saved = await SavedRecipe.findOne({ recipeId, userId }).lean().exec();
+    // Try DB first (user-specific data not required to show details)
+    const saved = await SavedRecipe.findOne({ recipeId }).lean().exec();
     if (saved) {
-      // attempt enrich but fallback to DB-only
       const ext = await enrichRecipeFromSpoonacular(recipeId);
       if (ext) {
         return res.json({ success: true, recipe: {
@@ -762,10 +812,11 @@ app.get('/api/recipes/:id', authenticateToken, async (req, res) => {
       }
     }
 
-    // not saved -> try external, but catch errors
+    // Not saved: try external (but safe)
     const ext = await enrichRecipeFromSpoonacular(recipeId);
     if (ext) return res.json({ success: true, recipe: ext });
-    // if external failed, return not found rather than 500
+
+    // external failed -> 404 rather than 500
     return res.status(404).json({ success: false, error: 'Recipe not found' });
   } catch (err) {
     console.error('Errore recupero dettaglio ricetta:', err);
