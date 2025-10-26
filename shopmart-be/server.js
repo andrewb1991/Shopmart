@@ -676,6 +676,50 @@ app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
   }
 });
 
+// ============================================
+// ENDPOINT: Proxy per immagini ricette (bypass CORS)
+// IMPORTANTE: Deve essere PRIMA di /api/recipes/:id per matchare correttamente
+// ============================================
+app.get('/api/recipes/image-proxy', async (req, res) => {
+  try {
+    const { url } = req.query;
+    if (!url) {
+      return res.status(400).json({ error: 'URL immagine richiesta' });
+    }
+
+    // Verifica che l'URL sia di Spoonacular (security)
+    if (!url.startsWith('https://img.spoonacular.com/') &&
+        !url.startsWith('https://spoonacular.com/')) {
+      return res.status(400).json({ error: 'URL non autorizzata' });
+    }
+
+    // Scarica l'immagine da Spoonacular
+    const response = await axios.get(url, {
+      responseType: 'arraybuffer',
+      timeout: 10000,
+    });
+
+    // Determina il content-type dall'URL o dalla response
+    let contentType = response.headers['content-type'] || 'image/jpeg';
+    if (url.endsWith('.png')) contentType = 'image/png';
+    if (url.endsWith('.jpg') || url.endsWith('.jpeg')) contentType = 'image/jpeg';
+    if (url.endsWith('.webp')) contentType = 'image/webp';
+
+    // Imposta header per caching
+    res.set({
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=86400', // 24 ore
+      'Access-Control-Allow-Origin': '*', // Permetti a tutti di accedere
+    });
+
+    // Restituisci l'immagine
+    res.send(Buffer.from(response.data));
+  } catch (err) {
+    console.error('Errore proxy immagine:', err.message);
+    res.status(500).json({ error: 'Errore nel caricamento dell\'immagine' });
+  }
+});
+
 // =======================
 // GET recipe details (defensive)
 // =======================
@@ -742,49 +786,6 @@ app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) =
   } catch (err) {
     console.error('Errore rimozione ricetta:', err);
     return res.status(500).json({ error: 'Errore nella rimozione della ricetta' });
-  }
-});
-
-// ============================================
-// ENDPOINT: Proxy per immagini ricette (bypass CORS)
-// ============================================
-app.get('/api/recipes/image-proxy', async (req, res) => {
-  try {
-    const { url } = req.query;
-    if (!url) {
-      return res.status(400).json({ error: 'URL immagine richiesta' });
-    }
-
-    // Verifica che l'URL sia di Spoonacular (security)
-    if (!url.startsWith('https://img.spoonacular.com/') &&
-        !url.startsWith('https://spoonacular.com/')) {
-      return res.status(400).json({ error: 'URL non autorizzata' });
-    }
-
-    // Scarica l'immagine da Spoonacular
-    const response = await axios.get(url, {
-      responseType: 'arraybuffer',
-      timeout: 10000,
-    });
-
-    // Determina il content-type dall'URL o dalla response
-    let contentType = response.headers['content-type'] || 'image/jpeg';
-    if (url.endsWith('.png')) contentType = 'image/png';
-    if (url.endsWith('.jpg') || url.endsWith('.jpeg')) contentType = 'image/jpeg';
-    if (url.endsWith('.webp')) contentType = 'image/webp';
-
-    // Imposta header per caching
-    res.set({
-      'Content-Type': contentType,
-      'Cache-Control': 'public, max-age=86400', // 24 ore
-      'Access-Control-Allow-Origin': '*', // Permetti a tutti di accedere
-    });
-
-    // Restituisci l'immagine
-    res.send(Buffer.from(response.data));
-  } catch (err) {
-    console.error('Errore proxy immagine:', err.message);
-    res.status(500).json({ error: 'Errore nel caricamento dell\'immagine' });
   }
 });
 
