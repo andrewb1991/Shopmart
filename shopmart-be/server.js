@@ -500,70 +500,6 @@ savedRecipeSchema.index({ recipeId: 1, userId: 1 }, { unique: true });
 const SavedRecipe = mongoose.model('SavedRecipe', savedRecipeSchema);
 
 // ============================================
-// ENDPOINT: Ottieni dettagli ricetta
-// ============================================
-app.get('/api/recipes/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
-    if (!SPOONACULAR_API_KEY) return res.status(500).json({ error: 'API key non configurata' });
-
-    const response = await axios.get(`https://api.spoonacular.com/recipes/${id}/information`, {
-      params: { apiKey: SPOONACULAR_API_KEY, includeNutrition: false }
-    });
-
-    const recipe = response.data;
-    const recipeDetails = {
-      id: recipe.id,
-      title: recipe.title,
-      image: recipe.image,
-      servings: recipe.servings,
-      readyInMinutes: recipe.readyInMinutes,
-      sourceUrl: recipe.sourceUrl,
-      summary: recipe.summary,
-      instructions: recipe.instructions,
-      extendedIngredients: recipe.extendedIngredients?.map(ing => ({
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        original: ing.original
-      })) || []
-    };
-
-    res.json({ success: true, recipe: recipeDetails });
-  } catch (err) {
-    console.error('Errore dettagli ricetta:', err.message);
-    res.status(500).json({ error: 'Errore nel recupero dei dettagli' });
-  }
-});
-
-// ============================================
-// ENDPOINT: Salva ricetta
-// ============================================
-app.post('/api/recipes/save', authenticateToken, async (req, res) => {
-  try {
-    const { recipeId, title, image, servings, readyInMinutes, sourceUrl, summary, instructions, ingredients } = req.body;
-    const userId = req.user.id;
-
-    if (!recipeId || !title) return res.status(400).json({ error: 'recipeId e title sono obbligatori' });
-
-    const existing = await SavedRecipe.findOne({ recipeId, userId });
-    if (existing) return res.status(409).json({ error: 'Ricetta già salvata', recipe: existing });
-
-    const savedRecipe = new SavedRecipe({
-      recipeId, userId, title, image, servings, readyInMinutes,
-      sourceUrl, summary, instructions, ingredients: ingredients || []
-    });
-
-    await savedRecipe.save();
-    res.json({ success: true, message: 'Ricetta salvata', recipe: savedRecipe });
-  } catch (err) {
-    console.error('Errore salvataggio ricetta:', err.message);
-    res.status(500).json({ error: 'Errore nel salvataggio della ricetta' });
-  }
-});
-
-// ============================================
 // ENDPOINT: Ottieni ricette salvate
 // ============================================
 // app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
@@ -746,9 +682,10 @@ app.get('/api/recipes/saved', authenticateToken, async (req, res) => {
 app.get('/api/recipes/:id', authenticateToken, async (req, res) => {
   try {
     const recipeId = parseInt(req.params.id, 10);
+    const userId = req.user.id;
 
-    // prova a trovare nel DB prima
-    const saved = await SavedRecipe.findOne({ recipeId }).lean().exec();
+    // prova a trovare nel DB prima (SOLO per l'utente corrente)
+    const saved = await SavedRecipe.findOne({ recipeId, userId }).lean().exec();
     if (saved) {
       // attempt enrich but fallback to DB-only
       const ext = await enrichRecipeFromSpoonacular(recipeId);
