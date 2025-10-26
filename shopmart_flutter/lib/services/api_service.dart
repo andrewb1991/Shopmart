@@ -195,6 +195,43 @@ class ApiService {
     }
   }
 
+  // Traduci dati ricette dall'inglese all'italiano usando DeepL
+  Future<List<Recipe>> translateRecipeData(List<Recipe> recipes) async {
+    try {
+      // Converti le ricette in formato JSON
+      final recipesJson = recipes.map((r) => {
+        'id': r.id,
+        'title': r.title,
+        'image': r.image,
+        'usedIngredientCount': r.usedIngredientCount,
+        'missedIngredientCount': r.missedIngredientCount,
+        'usedIngredients': r.usedIngredients,
+        'missedIngredients': r.missedIngredients,
+      }).toList();
+
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipes/translate-recipe-data'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'recipes': recipesJson}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['recipes'] != null) {
+          return (data['recipes'] as List)
+              .map((recipeJson) => Recipe.fromJson(recipeJson))
+              .toList();
+        }
+      }
+      // In caso di errore, restituisci le ricette originali
+      return recipes;
+    } catch (e) {
+      print('Errore durante la traduzione delle ricette: $e');
+      // In caso di errore, restituisci le ricette originali
+      return recipes;
+    }
+  }
+
   // Traduci ingredienti dall'italiano all'inglese usando DeepL
   Future<List<String>> translateIngredientsToEnglish(List<String> ingredients) async {
     try {

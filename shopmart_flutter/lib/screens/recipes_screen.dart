@@ -4,7 +4,7 @@ import 'package:provider/provider.dart';
 import '../services/api_service.dart';
 import '../providers/saved_recipes_provider.dart';
 
-class RecipesScreen extends StatelessWidget {
+class RecipesScreen extends StatefulWidget {
   final List<Recipe> recipes;
   final List<String> selectedIngredients;
 
@@ -13,6 +13,65 @@ class RecipesScreen extends StatelessWidget {
     required this.recipes,
     required this.selectedIngredients,
   });
+
+  @override
+  State<RecipesScreen> createState() => _RecipesScreenState();
+}
+
+class _RecipesScreenState extends State<RecipesScreen> {
+  late List<Recipe> _originalRecipes;
+  List<Recipe>? _translatedRecipes;
+  bool _showTranslated = true; // Mostra tradotto di default
+  bool _isTranslating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _originalRecipes = widget.recipes;
+    _translateRecipes();
+  }
+
+  Future<void> _translateRecipes() async {
+    if (_originalRecipes.isEmpty) return;
+
+    setState(() {
+      _isTranslating = true;
+    });
+
+    try {
+      final apiService = ApiService();
+      final translated = await apiService.translateRecipeData(_originalRecipes);
+
+      if (mounted) {
+        setState(() {
+          _translatedRecipes = translated;
+          _isTranslating = false;
+        });
+      }
+    } catch (e) {
+      print('Errore traduzione ricette: $e');
+      if (mounted) {
+        setState(() {
+          _isTranslating = false;
+          // In caso di errore, usa le ricette originali
+          _translatedRecipes = _originalRecipes;
+        });
+      }
+    }
+  }
+
+  void _toggleLanguage() {
+    setState(() {
+      _showTranslated = !_showTranslated;
+    });
+  }
+
+  List<Recipe> get _displayedRecipes {
+    if (_isTranslating || _translatedRecipes == null) {
+      return _originalRecipes;
+    }
+    return _showTranslated ? _translatedRecipes! : _originalRecipes;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,6 +95,33 @@ class RecipesScreen extends StatelessWidget {
                   letterSpacing: -0.5,
                 ),
               ),
+              actions: [
+                // Pulsante per toggleare lingua
+                if (_translatedRecipes != null)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: IconButton(
+                      icon: Icon(
+                        _showTranslated ? Icons.language : Icons.translate_outlined,
+                        size: 28,
+                      ),
+                      tooltip: _showTranslated ? 'Mostra originale' : 'Mostra tradotto',
+                      onPressed: _isTranslating ? null : _toggleLanguage,
+                    ),
+                  ),
+                // Indicatore di traduzione in corso
+                if (_isTranslating)
+                  const Padding(
+                    padding: EdgeInsets.only(right: 16),
+                    child: Center(
+                      child: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                  ),
+              ],
               backgroundColor: colorScheme.surface.withOpacity(0.7),
               foregroundColor: colorScheme.onSurface,
               elevation: 0,
@@ -44,7 +130,7 @@ class RecipesScreen extends StatelessWidget {
           ),
         ),
       ),
-      body: recipes.isEmpty
+      body: _displayedRecipes.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -120,7 +206,7 @@ class RecipesScreen extends StatelessWidget {
                       Wrap(
                         spacing: 6,
                         runSpacing: 6,
-                        children: selectedIngredients.map((ingredient) {
+                        children: widget.selectedIngredients.map((ingredient) {
                           return Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,
@@ -152,9 +238,9 @@ class RecipesScreen extends StatelessWidget {
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-                    itemCount: recipes.length,
+                    itemCount: _displayedRecipes.length,
                     itemBuilder: (context, index) {
-                      return _buildRecipeCard(context, recipes[index]);
+                      return _buildRecipeCard(context, _displayedRecipes[index]);
                     },
                   ),
                 ),
