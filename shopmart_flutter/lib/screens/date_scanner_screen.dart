@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
 import 'package:camera/camera.dart';
+import 'package:image_picker/image_picker.dart';
 import 'dart:async';
 
 class DateScannerScreen extends StatefulWidget {
@@ -13,40 +15,86 @@ class DateScannerScreen extends StatefulWidget {
 class _DateScannerScreenState extends State<DateScannerScreen> {
   CameraController? _cameraController;
   final textRecognizer = TextRecognizer();
+  final _imagePicker = ImagePicker();
   bool _isProcessing = false;
   String _detectedText = '';
   DateTime? _detectedDate;
   bool _isInitialized = false;
+  List<CameraDescription> _cameras = [];
+  int _currentCameraIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    if (!kIsWeb) {
+      _initializeCamera();
+    } else {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
   }
 
   Future<void> _initializeCamera() async {
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) {
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
         return;
       }
 
-      _cameraController = CameraController(
-        cameras.first,
-        ResolutionPreset.high,
-        enableAudio: false,
+      // Cerca la fotocamera posteriore
+      _currentCameraIndex = _cameras.indexWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.back,
       );
 
+      // Se non trova la posteriore, usa la prima disponibile
+      if (_currentCameraIndex == -1) {
+        _currentCameraIndex = 0;
+      }
+
+      await _setupCamera(_currentCameraIndex);
+    } catch (e) {
+      debugPrint('Error initializing camera: $e');
+      setState(() {
+        _detectedText = 'Errore inizializzazione camera: $e';
+      });
+    }
+  }
+
+  Future<void> _setupCamera(int cameraIndex) async {
+    if (_cameraController != null) {
+      await _cameraController!.dispose();
+    }
+
+    _cameraController = CameraController(
+      _cameras[cameraIndex],
+      ResolutionPreset.high,
+      enableAudio: false,
+    );
+
+    try {
       await _cameraController!.initialize();
       if (mounted) {
         setState(() {
           _isInitialized = true;
         });
-        _startScanning();
+        if (!kIsWeb) {
+          _startScanning();
+        }
       }
     } catch (e) {
-      debugPrint('Error initializing camera: $e');
+      debugPrint('Error setting up camera: $e');
+      setState(() {
+        _detectedText = 'Errore setup camera: $e';
+      });
     }
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameras.length <= 1) return;
+
+    _currentCameraIndex = (_currentCameraIndex + 1) % _cameras.length;
+    await _setupCamera(_currentCameraIndex);
   }
 
   void _startScanning() {
@@ -149,18 +197,36 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
     return null;
   }
 
-  Future<void> _processImage() async {
-    if (_isProcessing || _cameraController == null || !_cameraController!.value.isInitialized) {
-      return;
-    }
-
-    setState(() {
-      _isProcessing = true;
-    });
-
+  Future<void> _processImageFromPicker() async {
     try {
-      final image = await _cameraController!.takePicture();
-      final inputImage = InputImage.fromFilePath(image.path);
+      setState(() {
+        _isProcessing = true;
+      });
+
+      final XFile? pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+      );
+
+      if (pickedFile == null) {
+        setState(() {
+          _isProcessing = false;
+        });
+        return;
+      }
+
+      await _processImageFile(pickedFile.path);
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _detectedText = 'Errore: $e';
+      });
+    }
+  }
+
+  Future<void> _processImageFile(String imagePath) async {
+    try {
+      final inputImage = InputImage.fromFilePath(imagePath);
 
       final RecognizedText recognizedText =
           await textRecognizer.processImage(inputImage);
@@ -193,13 +259,37 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
         if (mounted) {
           Navigator.of(context).pop(foundDate);
         }
-      } else {
-        // Riprova dopo un secondo
-        await Future.delayed(const Duration(seconds: 1));
-        setState(() {
-          _isProcessing = false;
-        });
       }
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+        _detectedText = 'Errore: $e';
+      });
+    }
+  }
+
+  Future<void> _processImage() async {
+    if (_isProcessing) {
+      return;
+    }
+
+    // Su web, usa image picker
+    if (kIsWeb) {
+      await _processImageFromPicker();
+      return;
+    }
+
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+
+    setState(() {
+      _isProcessing = true;
+    });
+
+    try {
+      final image = await _cameraController!.takePicture();
+      await _processImageFile(image.path);
     } catch (e) {
       setState(() {
         _isProcessing = false;
@@ -216,7 +306,15 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
-          if (_cameraController != null)
+          // Pulsante per cambiare fotocamera (solo mobile)
+          if (!kIsWeb && _cameras.length > 1)
+            IconButton(
+              icon: const Icon(Icons.flip_camera_android),
+              onPressed: _switchCamera,
+              tooltip: 'Cambia fotocamera',
+            ),
+          // Flash (solo mobile con camera controller)
+          if (!kIsWeb && _cameraController != null)
             IconButton(
               icon: const Icon(Icons.flash_on),
               onPressed: () {
@@ -231,6 +329,8 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
       ),
       body: !_isInitialized
           ? const Center(child: CircularProgressIndicator())
+          : kIsWeb
+          ? _buildWebInterface()
           : Stack(
               children: [
                 // Camera preview
@@ -377,6 +477,151 @@ class _DateScannerScreenState extends State<DateScannerScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildWebInterface() {
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.camera_alt,
+              size: 100,
+              color: Colors.blue,
+            ),
+            const SizedBox(height: 32),
+            Card(
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Scansiona la data di scadenza',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Scatta una foto della data di scadenza stampata sul prodotto',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Formati supportati:',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'DD/MM/YYYY, DD-MM-YYYY\n25 DIC 2024',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            if (_isProcessing)
+              const Column(
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Riconoscimento in corso...'),
+                ],
+              )
+            else ...[
+              ElevatedButton.icon(
+                onPressed: _processImage,
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Scatta foto'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  textStyle: const TextStyle(fontSize: 16),
+                ),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).pop(null),
+                icon: const Icon(Icons.edit_calendar),
+                label: const Text('Inserimento manuale'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.blue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 32),
+            if (_detectedText.isNotEmpty)
+              Card(
+                color: _detectedDate != null
+                    ? Colors.green.shade50
+                    : Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Icon(
+                        _detectedDate != null ? Icons.check_circle : Icons.info,
+                        color: _detectedDate != null
+                            ? Colors.green
+                            : Colors.orange,
+                        size: 32,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _detectedDate != null
+                            ? 'Data trovata!'
+                            : 'Testo rilevato:',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _detectedDate != null
+                              ? Colors.green.shade700
+                              : Colors.orange.shade700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _detectedDate != null
+                            ? '${_detectedDate!.day.toString().padLeft(2, '0')}/${_detectedDate!.month.toString().padLeft(2, '0')}/${_detectedDate!.year}'
+                            : _detectedText.length > 100
+                                ? '${_detectedText.substring(0, 100)}...'
+                                : _detectedText,
+                        style: const TextStyle(fontSize: 14),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

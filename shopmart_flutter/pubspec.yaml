@@ -46,6 +46,9 @@ dependencies:
   # OCR per riconoscimento testo (date di scadenza)
   google_mlkit_text_recognition: ^0.13.1
 
+  # Image picker per web e selezione immagini
+  image_picker: ^1.1.2
+
   # HTTP client per chiamate API
   http: ^1.2.2
 
