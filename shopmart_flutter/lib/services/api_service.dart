@@ -423,6 +423,58 @@ class ApiService {
       return false;
     }
   }
+
+  // Traduci ricetta in italiano usando DeepL
+  Future<RecipeDetail?> translateRecipe(int recipeId) async {
+    try {
+      final headers = await _getHeaders();
+      final response = await http.post(
+        Uri.parse('$baseUrl/recipes/translate'),
+        headers: headers,
+        body: jsonEncode({'recipeId': recipeId}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['recipe'] != null) {
+          // Parse the translated recipe and return it
+          final recipe = data['recipe'];
+
+          final dynamic rawId = recipe['recipeId'] ?? recipe['id'] ?? recipe['_id'];
+          int parsedId = 0;
+          if (rawId is int) {
+            parsedId = rawId;
+          } else if (rawId is String) {
+            parsedId = int.tryParse(rawId) ?? 0;
+          } else if (rawId is Map && rawId.containsKey(r"$numberInt")) {
+            parsedId = int.tryParse(rawId[r"$numberInt"].toString()) ?? 0;
+          }
+
+          final rawIngredients = recipe['ingredients'] ?? [];
+          List<dynamic> ingredientsList = [];
+          if (rawIngredients is List) {
+            ingredientsList = rawIngredients;
+          }
+
+          return RecipeDetail.fromJson({
+            'id': parsedId,
+            'title': recipe['title'],
+            'image': recipe['image'],
+            'servings': recipe['servings'],
+            'readyInMinutes': recipe['readyInMinutes'],
+            'sourceUrl': recipe['sourceUrl'],
+            'summary': recipe['summary'],
+            'instructions': recipe['instructions'],
+            'extendedIngredients': ingredientsList,
+          });
+        }
+      }
+      return null;
+    } catch (e) {
+      print('Errore durante la traduzione della ricetta: $e');
+      return null;
+    }
+  }
 }
 
 // Model per ricetta base

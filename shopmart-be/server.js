@@ -840,6 +840,110 @@ app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) =
   }
 });
 
+// ============================================
+// ENDPOINT: Traduci ricetta in italiano con DeepL
+// ============================================
+app.post('/api/recipes/translate', authenticateToken, async (req, res) => {
+  try {
+    const { recipeId } = req.body;
+    const userId = req.user.id;
+
+    if (!recipeId) {
+      return res.status(400).json({ error: 'recipeId richiesto' });
+    }
+
+    const DEEPL_API_KEY = process.env.DEEPL_API_KEY;
+    if (!DEEPL_API_KEY) {
+      return res.status(500).json({ error: 'DeepL API key non configurata' });
+    }
+
+    // Trova la ricetta salvata
+    const savedRecipe = await SavedRecipe.findOne({
+      recipeId: parseInt(recipeId, 10),
+      userId
+    });
+
+    if (!savedRecipe) {
+      return res.status(404).json({ error: 'Ricetta non trovata' });
+    }
+
+    console.log(`🌍 Inizio traduzione ricetta ${recipeId} per utente ${userId}`);
+
+    // Helper per tradurre un singolo testo con DeepL
+    async function translateText(text, targetLang = 'IT') {
+      if (!text || text.trim() === '') return text;
+
+      try {
+        const response = await axios.post(
+          'https://api-free.deepl.com/v2/translate',
+          new URLSearchParams({
+            auth_key: DEEPL_API_KEY,
+            text: text,
+            target_lang: targetLang
+          }),
+          {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            timeout: 10000
+          }
+        );
+
+        if (response.data && response.data.translations && response.data.translations[0]) {
+          return response.data.translations[0].text;
+        }
+        return text;
+      } catch (err) {
+        console.error('Errore traduzione DeepL:', err.message);
+        return text; // Fallback al testo originale
+      }
+    }
+
+    // Traduci i campi principali
+    const translatedTitle = await translateText(savedRecipe.title);
+    const translatedSummary = savedRecipe.summary ? await translateText(savedRecipe.summary) : null;
+    const translatedInstructions = savedRecipe.instructions ? await translateText(savedRecipe.instructions) : null;
+
+    // Traduci gli ingredienti
+    const translatedIngredients = await Promise.all(
+      (savedRecipe.ingredients || []).map(async (ing) => ({
+        name: ing.name ? await translateText(ing.name) : ing.name,
+        amount: ing.amount,
+        unit: ing.unit,
+        original: ing.original ? await translateText(ing.original) : ing.original
+      }))
+    );
+
+    // Aggiorna la ricetta nel database
+    savedRecipe.title = translatedTitle;
+    savedRecipe.summary = translatedSummary;
+    savedRecipe.instructions = translatedInstructions;
+    savedRecipe.ingredients = translatedIngredients;
+
+    await savedRecipe.save();
+
+    console.log(`✓ Ricetta ${recipeId} tradotta con successo`);
+
+    // Restituisci la ricetta tradotta
+    return res.json({
+      success: true,
+      message: 'Ricetta tradotta con successo',
+      recipe: {
+        recipeId: savedRecipe.recipeId,
+        title: savedRecipe.title,
+        image: savedRecipe.image,
+        servings: savedRecipe.servings,
+        readyInMinutes: savedRecipe.readyInMinutes,
+        sourceUrl: savedRecipe.sourceUrl,
+        summary: savedRecipe.summary,
+        instructions: savedRecipe.instructions,
+        ingredients: savedRecipe.ingredients
+      }
+    });
+  } catch (err) {
+    console.error('Errore traduzione ricetta:', err);
+    return res.status(500).json({ error: 'Errore durante la traduzione della ricetta' });
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => console.log(`Server avviato su port ${PORT}`));

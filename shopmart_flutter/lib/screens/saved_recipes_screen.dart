@@ -838,6 +838,99 @@ class _RecipeDetailSheet extends StatefulWidget {
 }
 
 class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
+  bool _isTranslating = false;
+
+  Future<void> _translateRecipe() async {
+    setState(() {
+      _isTranslating = true;
+    });
+
+    try {
+      final apiService = ApiService();
+      final translatedRecipe = await apiService.translateRecipe(widget.recipe.id);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isTranslating = false;
+      });
+
+      if (translatedRecipe != null) {
+        // Aggiorna il provider con la ricetta tradotta
+        final savedRecipesProvider =
+            Provider.of<SavedRecipesProvider>(context, listen: false);
+        await savedRecipesProvider.loadSavedRecipes();
+
+        if (!context.mounted) return;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Ricetta tradotta con successo!'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        // Chiudi il bottom sheet corrente e riaprilo con la ricetta tradotta
+        Navigator.pop(context);
+        // Small delay to ensure smooth transition
+        await Future.delayed(const Duration(milliseconds: 300));
+        if (context.mounted) {
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => ChangeNotifierProvider.value(
+              value: savedRecipesProvider,
+              child: _RecipeDetailSheet(recipe: translatedRecipe),
+            ),
+          );
+        }
+      } else {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 12),
+                Text('Errore durante la traduzione'),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isTranslating = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error, color: Colors.white),
+              const SizedBox(width: 12),
+              Text('Errore: $e'),
+            ],
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
@@ -873,7 +966,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                   ),
                   child: Column(
                     children: [
-                      // Handle e pulsante Salva
+                      // Handle e pulsanti Traduci/Salva
                       Container(
                         padding: const EdgeInsets.fromLTRB(24, 12, 24, 8),
                         child: Row(
@@ -891,7 +984,27 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 ),
                               ),
                             ),
-                            // Pulsante Salva/Rimuovi in alto a destra
+                            // Pulsante Traduci (solo per ricette salvate)
+                            if (isSaved)
+                              _isTranslating
+                                  ? const Padding(
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                      child: SizedBox(
+                                        width: 24,
+                                        height: 24,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    )
+                                  : IconButton(
+                                      onPressed: _translateRecipe,
+                                      icon: const Icon(Icons.translate),
+                                      color: colorScheme.primary,
+                                      iconSize: 28,
+                                      tooltip: 'Traduci in italiano',
+                                    ),
+                            // Pulsante Salva/Rimuovi
                             IconButton(
                               onPressed: () async {
                                 if (isSaved) {
