@@ -406,7 +406,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen>
                           top: Radius.circular(20),
                         ),
                         child: Image.network(
-                          recipeDetail.image!,
+                          ApiService.getProxiedImageUrl(recipeDetail.image),
                           width: double.infinity,
                           height: 200,
                           fit: BoxFit.cover,
@@ -636,7 +636,7 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen>
                           top: Radius.circular(20),
                         ),
                         child: Image.network(
-                          recipe.image!,
+                          ApiService.getProxiedImageUrl(recipe.image),
                           width: double.infinity,
                           height: 200,
                           fit: BoxFit.cover,
@@ -904,7 +904,7 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(16),
                                   child: Image.network(
-                                    widget.recipe.image!,
+                                    ApiService.getProxiedImageUrl(widget.recipe.image),
                                     width: double.infinity,
                                     height: 250,
                                     fit: BoxFit.cover,

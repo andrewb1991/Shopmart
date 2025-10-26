@@ -213,7 +213,7 @@ class RecipesScreen extends StatelessWidget {
                           top: Radius.circular(20),
                         ),
                         child: Image.network(
-                          recipe.image!,
+                          ApiService.getProxiedImageUrl(recipe.image),
                           width: double.infinity,
                           height: 200,
                           fit: BoxFit.cover,
@@ -714,10 +714,21 @@ class _RecipeDetailSheetState extends State<_RecipeDetailSheet> {
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(16),
                                 child: Image.network(
-                                  widget.recipe.image!,
+                                  ApiService.getProxiedImageUrl(widget.recipe.image),
                                   width: double.infinity,
                                   height: 250,
                                   fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      height: 250,
+                                      color: Colors.grey[200],
+                                      child: Icon(
+                                        Icons.restaurant,
+                                        size: 64,
+                                        color: Colors.grey[400],
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
 

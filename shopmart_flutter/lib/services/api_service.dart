@@ -10,6 +10,23 @@ class ApiService {
 
   static String get baseUrl => AppConfig.apiUrl;
 
+  // Proxy per immagini ricette (bypass CORS)
+  static String getProxiedImageUrl(String? imageUrl) {
+    if (imageUrl == null || imageUrl.isEmpty) return '';
+
+    // Se l'immagine è già dal nostro backend, non serve proxy
+    if (imageUrl.startsWith(baseUrl)) return imageUrl;
+
+    // Se è un'immagine di Spoonacular, usa il proxy
+    if (imageUrl.startsWith('https://img.spoonacular.com/') ||
+        imageUrl.startsWith('https://spoonacular.com/')) {
+      return '$baseUrl/recipes/image-proxy?url=${Uri.encodeComponent(imageUrl)}';
+    }
+
+    // Per altre immagini, restituisci l'URL originale
+    return imageUrl;
+  }
+
   // Ottieni headers con token JWT
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getToken();
