@@ -427,6 +427,54 @@ app.post('/api/recipes/suggest', async (req, res) => {
 });
 
 // ============================================
+// ENDPOINT: Cerca ricette per nome/titolo
+// ============================================
+app.get('/api/recipes/search', async (req, res) => {
+  try {
+    const { query } = req.query;
+    if (!query || query.trim() === '') {
+      return res.status(400).json({ error: 'Query di ricerca richiesta' });
+    }
+
+    const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY;
+    if (!SPOONACULAR_API_KEY) {
+      return res.status(500).json({ error: 'API key non configurata' });
+    }
+
+    const response = await axios.get('https://api.spoonacular.com/recipes/complexSearch', {
+      params: {
+        apiKey: SPOONACULAR_API_KEY,
+        query: query.trim(),
+        number: 20,
+        addRecipeInformation: true,
+        fillIngredients: false
+      }
+    });
+
+    const recipes = response.data.results.map(recipe => ({
+      id: recipe.id,
+      title: recipe.title,
+      image: recipe.image,
+      usedIngredientCount: 0,
+      missedIngredientCount: 0,
+      usedIngredients: [],
+      missedIngredients: []
+    }));
+
+    res.json({ success: true, recipes });
+  } catch (err) {
+    console.error('Errore search recipes:', err.message);
+    if (err.response) {
+      return res.status(err.response.status).json({
+        error: 'Errore API ricette',
+        details: err.response.data
+      });
+    }
+    res.status(500).json({ error: 'Errore nella ricerca delle ricette' });
+  }
+});
+
+// ============================================
 // SCHEMA E MODELLO RICETTE SALVATE
 // ============================================
 const savedRecipeSchema = new mongoose.Schema({
