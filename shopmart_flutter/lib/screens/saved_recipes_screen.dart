@@ -66,8 +66,8 @@ class _SavedRecipesScreenState extends State<SavedRecipesScreen>
 
     try {
       final apiService = ApiService();
-      // Usa la query come ingrediente per cercare ricette (chiamata al backend -> eventuale enrichment)
-      final recipes = await apiService.suggestRecipes([query]);
+      // Cerca ricette per nome/titolo usando Spoonacular complexSearch
+      final recipes = await apiService.searchRecipesByName(query);
 
       if (mounted) {
         setState(() {

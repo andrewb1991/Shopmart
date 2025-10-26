@@ -202,6 +202,29 @@ class ApiService {
     }
   }
 
+  // Cerca ricette per nome/titolo
+  Future<List<Recipe>> searchRecipesByName(String query) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/recipes/search?query=${Uri.encodeComponent(query)}'),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success'] == true && data['recipes'] != null) {
+          return (data['recipes'] as List)
+              .map((recipe) => Recipe.fromJson(recipe))
+              .toList();
+        }
+      }
+      return [];
+    } catch (e) {
+      print('Errore durante la ricerca delle ricette per nome: $e');
+      return [];
+    }
+  }
+
   // Ottieni dettagli ricetta
   Future<RecipeDetail?> getRecipeDetails(int recipeId) async {
     try {
