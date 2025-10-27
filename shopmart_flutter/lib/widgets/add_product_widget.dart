@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 import '../providers/inventory_provider.dart';
 import '../screens/barcode_scanner_screen.dart';
+import '../screens/date_scanner_screen.dart';
 import '../models/product.dart';
 
 class AddProductWidget extends StatefulWidget {
@@ -51,7 +53,31 @@ class _AddProductWidgetState extends State<AddProductWidget> {
     }
   }
 
-  Future<void> _openBarcodeScanner() async {
+  Future<void> _scanExpiryDate() async {
+    final DateTime? scannedDate = await Navigator.push<DateTime>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const DateScannerScreen(),
+      ),
+    );
+
+    if (scannedDate != null && mounted) {
+      setState(() {
+        _selectedDate = scannedDate;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Data riconosciuta: ${DateFormat('dd/MM/yyyy').format(scannedDate)}',
+          ),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _openBarcodeScanner() async{
     final result = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -509,60 +535,84 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                 ],
               ),
               const SizedBox(height: 12),
-              InkWell(
-                onTap: () => _selectDate(context),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: colorScheme.onSurfaceVariant.withOpacity(0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.calendar_today_rounded,
-                        color: colorScheme.onSurfaceVariant,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
+                children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () => _selectDate(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              'Data di scadenza',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: colorScheme.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
+                            Icon(
+                              Icons.calendar_today_rounded,
+                              color: colorScheme.onSurfaceVariant,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Data di scadenza',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: colorScheme.onSurfaceVariant,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    _selectedDate == null
+                                        ? 'Seleziona data *'
+                                        : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              _selectedDate == null
-                                  ? 'Seleziona data *'
-                                  : DateFormat('dd/MM/yyyy').format(_selectedDate!),
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: colorScheme.onSurface,
-                              ),
+                            Icon(
+                              Icons.arrow_forward_ios_rounded,
+                              color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                              size: 16,
                             ),
                           ],
                         ),
                       ),
-                      Icon(
-                        Icons.arrow_forward_ios_rounded,
-                        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                        size: 16,
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  // Pulsante OCR solo su mobile
+                  if (!kIsWeb) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.blue[600],
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: IconButton(
+                        onPressed: _scanExpiryDate,
+                        icon: const Icon(
+                          Icons.document_scanner_rounded,
+                          color: Colors.white,
+                        ),
+                        tooltip: 'Scansiona data',
+                      ),
+                    ),
+                  ],
+                ],
               ),
               const SizedBox(height: 20),
               // Pulsante aggiungi
@@ -838,60 +888,84 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                         const SizedBox(height: 12),
 
                         // Data scadenza
-                        InkWell(
-                          onTap: () => _selectDate(context),
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: colorScheme.onSurfaceVariant.withOpacity(0.3),
-                                width: 1,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.calendar_today_rounded,
-                                  color: colorScheme.onSurfaceVariant,
-                                  size: 20,
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                        Row(
+                          children: [
+                            Expanded(
+                              child: InkWell(
+                                onTap: () => _selectDate(context),
+                                child: Container(
+                                  padding: const EdgeInsets.all(16),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Row(
                                     children: [
-                                      Text(
-                                        'Data di scadenza',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: colorScheme.onSurfaceVariant,
-                                          fontWeight: FontWeight.w500,
+                                      Icon(
+                                        Icons.calendar_today_rounded,
+                                        color: colorScheme.onSurfaceVariant,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Data di scadenza',
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: colorScheme.onSurfaceVariant,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              _selectedDate == null
+                                                  ? 'Seleziona data *'
+                                                  : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        _selectedDate == null
-                                            ? 'Seleziona data *'
-                                            : DateFormat('dd/MM/yyyy').format(_selectedDate!),
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: colorScheme.onSurface,
-                                        ),
+                                      Icon(
+                                        Icons.arrow_forward_ios_rounded,
+                                        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                        size: 16,
                                       ),
                                     ],
                                   ),
                                 ),
-                                Icon(
-                                  Icons.arrow_forward_ios_rounded,
-                                  color: colorScheme.onSurfaceVariant.withOpacity(0.5),
-                                  size: 16,
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
+                            // Pulsante OCR solo su mobile
+                            if (!kIsWeb) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.blue[600],
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: IconButton(
+                                  onPressed: _scanExpiryDate,
+                                  icon: const Icon(
+                                    Icons.document_scanner_rounded,
+                                    color: Colors.white,
+                                  ),
+                                  tooltip: 'Scansiona data',
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
 
                         const SizedBox(height: 20),
