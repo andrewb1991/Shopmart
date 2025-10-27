@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:ui';
 import '../providers/inventory_provider.dart';
 import '../screens/barcode_scanner_screen.dart';
-import '../screens/date_scanner_screen.dart';
 import '../models/product.dart';
 
 class AddProductWidget extends StatefulWidget {
@@ -36,132 +34,20 @@ class _AddProductWidgetState extends State<AddProductWidget> {
   }
 
   Future<void> _selectDate(BuildContext context) async {
-    if (kIsWeb) {
-      // Web: usa un dialog con TextField per input data manuale
-      await _showWebDatePicker(context);
-    } else {
-      // Mobile: usa il date picker nativo
-      final DateTime? picked = await showDatePicker(
-        context: context,
-        initialDate: DateTime.now().add(const Duration(days: 30)),
-        firstDate: DateTime.now(),
-        lastDate: DateTime.now().add(const Duration(days: 3650)),
-        locale: const Locale('it', 'IT'),
-        helpText: 'Seleziona data di scadenza',
-        cancelText: 'Annulla',
-        confirmText: 'OK',
-      );
-      if (picked != null && picked != _selectedDate) {
-        setState(() {
-          _selectedDate = picked;
-        });
-      }
-    }
-  }
-
-  Future<void> _showWebDatePicker(BuildContext context) async {
-    final TextEditingController dateController = TextEditingController(
-      text: _selectedDate != null
-        ? DateFormat('yyyy-MM-dd').format(_selectedDate!)
-        : DateFormat('yyyy-MM-dd').format(DateTime.now().add(const Duration(days: 30))),
-    );
-
-    final result = await showDialog<DateTime?>(
+    final DateTime? picked = await showDatePicker(
       context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Seleziona data di scadenza'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: dateController,
-                decoration: const InputDecoration(
-                  labelText: 'Data (AAAA-MM-GG)',
-                  hintText: '2024-12-31',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                keyboardType: TextInputType.datetime,
-                onTap: () {
-                  // Posiziona il cursore alla fine
-                  dateController.selection = TextSelection.fromPosition(
-                    TextPosition(offset: dateController.text.length),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Formato: AAAA-MM-GG (es. 2024-12-31)',
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(null),
-              child: const Text('Annulla'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                try {
-                  final parsedDate = DateTime.parse(dateController.text);
-                  if (parsedDate.isBefore(DateTime.now().subtract(const Duration(days: 1)))) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('La data deve essere nel futuro'),
-                        backgroundColor: Colors.orange,
-                      ),
-                    );
-                    return;
-                  }
-                  Navigator.of(context).pop(parsedDate);
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Formato data non valido. Usa AAAA-MM-GG'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
+      initialDate: _selectedDate ?? DateTime.now().add(const Duration(days: 30)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 3650)),
+      locale: const Locale('it', 'IT'),
+      helpText: 'Seleziona data di scadenza',
+      cancelText: 'Annulla',
+      confirmText: 'OK',
     );
-
-    if (result != null && mounted) {
+    if (picked != null && picked != _selectedDate) {
       setState(() {
-        _selectedDate = result;
+        _selectedDate = picked;
       });
-    }
-
-    dateController.dispose();
-  }
-
-  Future<void> _scanExpiryDate() async {
-    final DateTime? scannedDate = await Navigator.push<DateTime>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const DateScannerScreen(),
-      ),
-    );
-
-    if (scannedDate != null && mounted) {
-      setState(() {
-        _selectedDate = scannedDate;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Data riconosciuta: ${DateFormat('dd/MM/yyyy').format(scannedDate)}',
-          ),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -623,99 +509,60 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                 ],
               ),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            onTap: () => _selectDate(context),
-                            borderRadius: BorderRadius.circular(16),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    Colors.white.withOpacity(0.8),
-                                    Colors.white.withOpacity(0.6),
-                                  ],
-                                ),
-                                borderRadius: BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: Colors.white.withOpacity(0.5),
-                                  width: 1.5,
-                                ),
-                              ),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 14,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    _selectedDate == null
-                                        ? 'Data scadenza *'
-                                        : DateFormat('dd/MM/yyyy').format(_selectedDate!),
-                                    style: TextStyle(
-                                      color: _selectedDate == null
-                                          ? Colors.grey[700]
-                                          : Colors.black87,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 15,
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.calendar_today_rounded,
-                                    size: 20,
-                                    color: Colors.grey[700],
-                                  ),
-                                ],
+              InkWell(
+                onTap: () => _selectDate(context),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        color: colorScheme.onSurfaceVariant,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Data di scadenza',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colorScheme.onSurfaceVariant,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 2),
+                            Text(
+                              _selectedDate == null
+                                  ? 'Seleziona data *'
+                                  : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                            colors: [
-                              Colors.blue[50]!.withOpacity(0.8),
-                              Colors.blue[100]!.withOpacity(0.6),
-                            ],
-                          ),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: Colors.blue.withOpacity(0.3),
-                            width: 1.5,
-                          ),
-                        ),
-                        child: IconButton(
-                          onPressed: _scanExpiryDate,
-                          icon: Icon(
-                            Icons.document_scanner_rounded,
-                            color: Colors.blue[700],
-                          ),
-                          tooltip: 'Scansiona data',
-                        ),
+                      Icon(
+                        Icons.arrow_forward_ios_rounded,
+                        color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                        size: 16,
                       ),
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
               const SizedBox(height: 20),
               // Pulsante aggiungi
@@ -991,100 +838,60 @@ class _AddProductWidgetState extends State<AddProductWidget> {
                         const SizedBox(height: 12),
 
                         // Data scadenza
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () => _selectDate(context),
-                                      borderRadius: BorderRadius.circular(16),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          gradient: LinearGradient(
-                                            begin: Alignment.topLeft,
-                                            end: Alignment.bottomRight,
-                                            colors: [
-                                              Colors.white.withOpacity(0.8),
-                                              Colors.white.withOpacity(0.6),
-                                            ],
-                                          ),
-                                          borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(
-                                            color: Colors.white.withOpacity(0.5),
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 16,
-                                          vertical: 14,
-                                        ),
-                                        child: Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              _selectedDate == null
-                                                  ? 'Data scadenza'
-                                                  : DateFormat('dd/MM/yyyy')
-                                                      .format(_selectedDate!),
-                                              style: TextStyle(
-                                                color: _selectedDate == null
-                                                    ? Colors.grey[700]
-                                                    : Colors.black87,
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 15,
-                                              ),
-                                            ),
-                                            Icon(
-                                              Icons.calendar_today_rounded,
-                                              size: 20,
-                                              color: Colors.grey[700],
-                                            ),
-                                          ],
+                        InkWell(
+                          onTap: () => _selectDate(context),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: colorScheme.surface.withOpacity(isDark ? 0.5 : 0.7),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: colorScheme.onSurfaceVariant.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  color: colorScheme.onSurfaceVariant,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Data di scadenza',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: colorScheme.onSurfaceVariant,
+                                          fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        _selectedDate == null
+                                            ? 'Seleziona data *'
+                                            : DateFormat('dd/MM/yyyy').format(_selectedDate!),
+                                        style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: colorScheme.onSurface,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(16),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Colors.blue[50]!.withOpacity(0.8),
-                                        Colors.blue[100]!.withOpacity(0.6),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(16),
-                                    border: Border.all(
-                                      color: Colors.blue.withOpacity(0.3),
-                                      width: 1.5,
-                                    ),
-                                  ),
-                                  child: IconButton(
-                                    onPressed: _scanExpiryDate,
-                                    icon: Icon(
-                                      Icons.document_scanner_rounded,
-                                      color: Colors.blue[700],
-                                    ),
-                                    tooltip: 'Scansiona data',
-                                  ),
+                                Icon(
+                                  Icons.arrow_forward_ios_rounded,
+                                  color: colorScheme.onSurfaceVariant.withOpacity(0.5),
+                                  size: 16,
                                 ),
-                              ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
 
                         const SizedBox(height: 20),
