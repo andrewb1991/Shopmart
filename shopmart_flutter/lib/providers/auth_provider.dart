@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -8,6 +9,7 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   bool _isLoading = false;
   String? _error;
+  StreamSubscription<UserModel?>? _webSignInSub;
 
   UserModel? get user => _user;
   bool get isLoading => _isLoading;
@@ -17,6 +19,29 @@ class AuthProvider with ChangeNotifier {
 
   AuthProvider() {
     _loadSavedUser();
+    // Attiva il flusso Google web (pulsante GIS) e reagisce al login riuscito.
+    _authService.initWebGoogleSignIn();
+    _webSignInSub = _authService.webSignInStream.listen(
+      (user) {
+        if (user != null) {
+          _user = user;
+          _error = null;
+        }
+        _isLoading = false;
+        notifyListeners();
+      },
+      onError: (e) {
+        _error = e.toString();
+        _isLoading = false;
+        notifyListeners();
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _webSignInSub?.cancel();
+    super.dispose();
   }
 
   // Carica utente salvato al boot

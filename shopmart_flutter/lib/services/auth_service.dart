@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -8,21 +9,75 @@ import '../utils/app_config.dart';
 import '../models/user_model.dart';
 
 class AuthService {
+  // Su web il clientId è letto dal meta tag in web/index.html e serverClientId
+  // NON è supportato dal plugin web; su mobile passiamo clientId/serverClientId
+  // dal .env così l'idToken è emesso con l'audience attesa dal backend.
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-    // IMPORTANTE: Sostituisci con il tuo Web Client ID da Google Cloud Console
-    // Provide both clientId and serverClientId when available. Some web
-    // implementations read the clientId meta tag, others prefer the
-    // explicit clientId property. Supplying both is defensive.
-    clientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
-    serverClientId: dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+    scopes: const ['email', 'profile'],
+    clientId: kIsWeb ? null : dotenv.env['GOOGLE_WEB_CLIENT_ID'],
+    serverClientId: kIsWeb ? null : dotenv.env['GOOGLE_WEB_CLIENT_ID'],
   );
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
 
   static const String _userKey = 'user_data';
   static const String _tokenKey = 'auth_token';
 
+  // Stream degli utenti autenticati via pulsante GIS sul web.
+  final StreamController<UserModel?> _webSignInController =
+      StreamController<UserModel?>.broadcast();
+  Stream<UserModel?> get webSignInStream => _webSignInController.stream;
+  bool _webInitialized = false;
+
   String get baseUrl => AppConfig.baseUrl;
+
+  /// Inizializza il flusso Google su web: ascolta onCurrentUserChanged (che sul
+  /// web emette un account con idToken quando l'utente usa il pulsante GIS),
+  /// invia l'idToken al backend e propaga l'utente via [webSignInStream].
+  /// No-op su mobile/desktop.
+  void initWebGoogleSignIn() {
+    if (!kIsWeb || _webInitialized) return;
+    _webInitialized = true;
+    _googleSignIn.onCurrentUserChanged.listen((account) async {
+      if (account == null) return;
+      try {
+        final auth = await account.authentication;
+        final idToken = auth.idToken;
+        if (idToken == null) {
+          _webSignInController.addError('idToken Google non disponibile');
+          return;
+        }
+        final user = await _authenticateWithBackend(idToken);
+        _webSignInController.add(user);
+      } catch (e) {
+        _webSignInController
+            .addError('Errore durante l\'accesso con Google: $e');
+      }
+    });
+    // Prova a ripristinare una sessione esistente senza interazione.
+    _googleSignIn.signInSilently();
+  }
+
+  /// Invia l'idToken Google al backend (che lo verifica) e salva la sessione.
+  Future<UserModel?> _authenticateWithBackend(String idToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/api/auth/google'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'idToken': idToken}),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final user = UserModel.fromJson(data['user']);
+      await _storage.write(key: _tokenKey, value: data['token']);
+      await _storage.write(key: _userKey, value: jsonEncode(user.toJson()));
+      return user;
+    }
+    String message = 'Errore durante l\'autenticazione con Google';
+    try {
+      final err = jsonDecode(response.body);
+      if (err is Map && err['error'] != null) message = err['error'].toString();
+    } catch (_) {}
+    throw message;
+  }
 
   // Registrazione con email e password
   Future<UserModel?> registerWithEmail({

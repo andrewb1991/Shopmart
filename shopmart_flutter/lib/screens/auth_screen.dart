@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:provider/provider.dart';
 import 'dart:ui';
 import '../providers/auth_provider.dart';
+import '../widgets/google_web_button.dart';
 import 'main_navigation_screen.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -487,8 +489,11 @@ class _AuthScreenState extends State<AuthScreen> {
 
               const SizedBox(height: 24),
 
-              // Google Sign-In Button
-              Container(
+              // Google Sign-In Button — su web usa il pulsante GIS (che
+              // fornisce l'idToken); su mobile il pulsante custom + signIn().
+              kIsWeb
+                  ? Center(child: buildGoogleWebButton())
+                  : Container(
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
