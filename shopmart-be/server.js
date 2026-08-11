@@ -10,10 +10,24 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { translate } = require('@vitalets/google-translate-api');
 const cors = require('cors');
+const { verifyGoogleIdToken } = require('./auth/googleVerify');
 require('dotenv').config();
 
 const uuidv4 = () => crypto.randomUUID();
-const JWT_SECRET = process.env.JWT_SECRET || 'shopmart_secret_key_change_in_production';
+
+// Fix H1: nessun fallback debole. Il secret DEVE arrivare dall'ambiente,
+// altrimenti i token sarebbero firmati con un valore noto e forgiabili.
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  console.error('✗ FATAL: JWT_SECRET non impostato. Configura la variabile d\'ambiente prima di avviare il server.');
+  process.exit(1);
+}
+
+// Fix C1: audience attesa per la verifica dell'idToken Google (Web Client ID).
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+if (!GOOGLE_CLIENT_ID) {
+  console.warn('⚠️ GOOGLE_CLIENT_ID non impostato: il login Google verrà rifiutato finché non lo configuri.');
+}
 
 // Minimal translation dictionary (same as original, truncated here for brevity)
 const translationDictionary = {
@@ -166,11 +180,27 @@ app.post('/api/auth/login', async (req, res) => {
   } catch (err) { console.error('Errore login:', err); res.status(500).json({ error: 'Errore durante il login' }); }
 });
 
-// Google sign-in (minimal)
+// Google sign-in — Fix C1: verifica crittografica dell'idToken lato server.
+// NON ci si fida più di googleId/email dal body (consentivano account takeover):
+// l'identità è derivata esclusivamente dai claim verificati da Google.
 app.post('/api/auth/google', async (req, res) => {
   try {
-    const { googleId, email, displayName, photoUrl, firstName, lastName } = req.body;
-    if (!googleId || !email) return res.status(400).json({ error: 'Google ID ed email sono obbligatori' });
+    const { idToken } = req.body;
+    if (!idToken) return res.status(400).json({ error: 'idToken Google mancante' });
+    if (!GOOGLE_CLIENT_ID) {
+      console.error('GOOGLE_CLIENT_ID non configurato: login Google non disponibile');
+      return res.status(500).json({ error: 'Autenticazione Google non configurata sul server' });
+    }
+
+    let claims;
+    try {
+      claims = await verifyGoogleIdToken(idToken, { clientId: GOOGLE_CLIENT_ID });
+    } catch (e) {
+      console.warn('Google idToken rifiutato:', e.code || e.message);
+      return res.status(401).json({ error: 'Token Google non valido' });
+    }
+
+    const { googleId, email, displayName, photoUrl, firstName, lastName } = claims;
 
     let user = await User.findOne({ $or: [{ googleId }, { email }] });
 
