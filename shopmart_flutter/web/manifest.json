@@ -1,11 +1,11 @@
 {
-    "name": "shopmart_flutter",
-    "short_name": "shopmart_flutter",
+    "name": "Shopmart",
+    "short_name": "Shopmart",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Shopmart - Gestione magazzino casa con scansione barcode e tracciamento scadenze.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
