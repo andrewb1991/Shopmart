@@ -10,7 +10,9 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { translate } = require('@vitalets/google-translate-api');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { verifyGoogleIdToken } = require('./auth/googleVerify');
+const { validateCredentials } = require('./auth/validators');
 require('dotenv').config();
 
 const uuidv4 = () => crypto.randomUUID();
@@ -54,6 +56,20 @@ async function translateToItalian(text) {
 }
 
 const app = express();
+
+// Dietro il proxy di Railway: necessario perché il rate limiter usi l'IP client
+// reale (X-Forwarded-For) e non quello del proxy.
+app.set('trust proxy', 1);
+
+// Fix H2: rate limiting sulle rotte di autenticazione (anti brute-force /
+// credential stuffing). Limite volutamente ampio per non disturbare l'uso reale.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minuti
+  max: 30,                  // max 30 richieste/IP per finestra sulle rotte /api/auth/*
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Troppi tentativi. Riprova tra qualche minuto.' },
+});
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',')
@@ -154,10 +170,11 @@ const authenticateToken = (req, res, next) => {
 };
 
 // ------------------ AUTH ROUTES ------------------
-app.post('/api/auth/register', async (req, res) => {
+app.post('/api/auth/register', authLimiter, async (req, res) => {
   try {
     const { email, password, firstName, lastName } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email e password sono obbligatori' });
+    const v = validateCredentials({ email, password }, { enforcePasswordStrength: true });
+    if (!v.ok) return res.status(400).json({ error: v.error });
     const existing = await User.findOne({ email });
     if (existing) return res.status(409).json({ error: 'Email già registrata' });
     const user = new User({ email, password, firstName, lastName, displayName: `${firstName} ${lastName}` });
@@ -167,10 +184,11 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (err) { console.error('Errore registrazione:', err); res.status(500).json({ error: 'Errore durante la registrazione' }); }
 });
 
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', authLimiter, async (req, res) => {
   try {
     const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ error: 'Email e password sono obbligatori' });
+    const v = validateCredentials({ email, password });
+    if (!v.ok) return res.status(400).json({ error: v.error });
     const user = await User.findOne({ email });
     if (!user) return res.status(401).json({ error: 'Credenziali non valide' });
     const ok = await user.comparePassword(password);
@@ -183,7 +201,7 @@ app.post('/api/auth/login', async (req, res) => {
 // Google sign-in — Fix C1: verifica crittografica dell'idToken lato server.
 // NON ci si fida più di googleId/email dal body (consentivano account takeover):
 // l'identità è derivata esclusivamente dai claim verificati da Google.
-app.post('/api/auth/google', async (req, res) => {
+app.post('/api/auth/google', authLimiter, async (req, res) => {
   try {
     const { idToken } = req.body;
     if (!idToken) return res.status(400).json({ error: 'idToken Google mancante' });

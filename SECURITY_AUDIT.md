@@ -140,10 +140,11 @@ irrobustimenti dei flussi esistenti.
 
 | Fase | Item | Stato |
 |------|------|-------|
-| 0 | Rimozione fallback debole `JWT_SECRET` (H1) | ⏳ in corso (branch `security/hardening-phase0-c1`) |
+| 0 | Rimozione fallback debole `JWT_SECRET` (H1) | ✅ fatto e deployato |
 | 0 | Rigenerazione `DEEPL_API_KEY` + env Railway | ☐ azione manuale |
-| 1 | C1 — verifica `idToken` Google | ⏳ in corso |
-| 1 | H2 — rate limiting | ☐ da fare |
-| 1 | M1 — validazione input | ☐ da fare |
+| 1 | C1 — verifica `idToken` Google | ✅ fatto e deployato (Railway) |
+| 1 | Login Google web via pulsante GIS (fallout C1) | ✅ fatto e deployato (Firebase) |
+| 1 | H2 — rate limiting | ⏳ in corso |
+| 1 | M1 — validazione input + policy password | ⏳ in corso |
 | 2 | H3/H4/M2/M3 | ☐ da fare |
 | 3 | Governance | ☐ da fare |
