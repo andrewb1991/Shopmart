@@ -969,12 +969,14 @@ app.post('/api/recipes/translate-recipe-detail', expensiveLimiter, async (req, r
         const response = await axios.post(
           'https://api-free.deepl.com/v2/translate',
           new URLSearchParams({
-            auth_key: DEEPL_API_KEY,
             text: text,
             target_lang: targetLang
           }),
           {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+              'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
             timeout: 10000
           }
         );
@@ -1050,12 +1052,14 @@ app.post('/api/recipes/translate-recipe-data', expensiveLimiter, async (req, res
         const response = await axios.post(
           'https://api-free.deepl.com/v2/translate',
           new URLSearchParams({
-            auth_key: DEEPL_API_KEY,
             text: text,
             target_lang: targetLang
           }),
           {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+              'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
             timeout: 10000
           }
         );
@@ -1139,12 +1143,14 @@ app.post('/api/recipes/translate-ingredients', expensiveLimiter, async (req, res
         const response = await axios.post(
           'https://api-free.deepl.com/v2/translate',
           new URLSearchParams({
-            auth_key: DEEPL_API_KEY,
             text: text,
             target_lang: targetLang
           }),
           {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+              'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
             timeout: 10000
           }
         );
@@ -1217,12 +1223,14 @@ app.post('/api/recipes/translate', expensiveLimiter, authenticateToken, async (r
         const response = await axios.post(
           'https://api-free.deepl.com/v2/translate',
           new URLSearchParams({
-            auth_key: DEEPL_API_KEY,
             text: text,
             target_lang: targetLang
           }),
           {
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            headers: {
+              'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+              'Content-Type': 'application/x-www-form-urlencoded'
+            },
             timeout: 10000
           }
         );
