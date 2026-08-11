@@ -10,6 +10,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { translate } = require('@vitalets/google-translate-api');
 const cors = require('cors');
+const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const { verifyGoogleIdToken } = require('./auth/googleVerify');
 const { validateCredentials } = require('./auth/validators');
@@ -61,6 +62,13 @@ const app = express();
 // reale (X-Forwarded-For) e non quello del proxy.
 app.set('trust proxy', 1);
 
+// Fix M2: header di sicurezza. CSP disabilitata (è un'API JSON, non serve) e
+// CORP cross-origin per non bloccare l'endpoint proxy immagini.
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' },
+}));
+
 // Fix H2: rate limiting sulle rotte di autenticazione (anti brute-force /
 // credential stuffing). Limite volutamente ampio per non disturbare l'uso reale.
 const authLimiter = rateLimit({
@@ -69,6 +77,17 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: 'Troppi tentativi. Riprova tra qualche minuto.' },
+});
+
+// Fix H3: rate limit sugli endpoint che chiamano API di terze parti a pagamento
+// (DeepL/Spoonacular/OpenFoodFacts) — anti-abuso economico. Nessuna auth
+// richiesta, per non rompere le funzionalità pubbliche del client.
+const expensiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Troppe richieste. Riprova tra qualche minuto.' },
 });
 
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
@@ -395,7 +414,7 @@ async function getSuggestions(category) {
 // ============================================
 // ENDPOINT: Lookup prodotto da OpenFoodFacts
 // ============================================
-app.post('/api/product/lookup', async (req, res) => {
+app.post('/api/product/lookup', expensiveLimiter, async (req, res) => {
   try {
     const { barcode } = req.body;
 
@@ -463,7 +482,7 @@ app.post('/api/product/lookup', async (req, res) => {
 });
 
 // -- minimal recipes endpoints (keep as-is or extend)
-app.post('/api/recipes/suggest', async (req, res) => {
+app.post('/api/recipes/suggest', expensiveLimiter, async (req, res) => {
   try {
     const { ingredients } = req.body; if (!ingredients || !Array.isArray(ingredients) || ingredients.length === 0) return res.status(400).json({ error: 'Ingredienti richiesti' });
     const SPOONACULAR_API_KEY = process.env.SPOONACULAR_API_KEY; if (!SPOONACULAR_API_KEY) return res.status(500).json({ error: 'API key non configurata' });
@@ -471,13 +490,13 @@ app.post('/api/recipes/suggest', async (req, res) => {
     const response = await axios.get('https://api.spoonacular.com/recipes/findByIngredients', { params: { apiKey: SPOONACULAR_API_KEY, ingredients: ingredientString, number: 10, ranking: 2, ignorePantry: true } });
     const recipes = response.data.map(recipe => ({ id: recipe.id, title: recipe.title, image: recipe.image, usedIngredientCount: recipe.usedIngredientCount, missedIngredientCount: recipe.missedIngredientCount, usedIngredients: recipe.usedIngredients.map(i => i.name), missedIngredients: recipe.missedIngredients.map(i => i.name) }));
     res.json({ success: true, recipes });
-  } catch (err) { console.error('Errore suggest recipes:', err); if (err.response) return res.status(err.response.status).json({ error: 'Errore API ricette', details: err.response.data }); res.status(500).json({ error: 'Errore nella ricerca delle ricette' }); }
+  } catch (err) { console.error('Errore suggest recipes:', err); if (err.response) return res.status(err.response.status).json({ error: 'Errore API ricette' }); res.status(500).json({ error: 'Errore nella ricerca delle ricette' }); }
 });
 
 // ============================================
 // ENDPOINT: Cerca ricette per nome/titolo
 // ============================================
-app.get('/api/recipes/search', async (req, res) => {
+app.get('/api/recipes/search', expensiveLimiter, async (req, res) => {
   try {
     const { query } = req.query;
     if (!query || query.trim() === '') {
@@ -514,8 +533,7 @@ app.get('/api/recipes/search', async (req, res) => {
     console.error('Errore search recipes:', err.message);
     if (err.response) {
       return res.status(err.response.status).json({
-        error: 'Errore API ricette',
-        details: err.response.data
+        error: 'Errore API ricette'
       });
     }
     res.status(500).json({ error: 'Errore nella ricerca delle ricette' });
@@ -822,7 +840,7 @@ app.get('/api/recipes/image-proxy', async (req, res) => {
 // });
 
 // Get recipe details (public). We first try DB (if saved), then external. Non-blocking: do not throw 500 due to provider.
-app.get('/api/recipes/:id', async (req, res) => {
+app.get('/api/recipes/:id', expensiveLimiter, async (req, res) => {
   try {
     const recipeId = parseInt(req.params.id, 10);
     if (Number.isNaN(recipeId)) return res.status(400).json({ success: false, error: 'ID ricetta non valido' });
@@ -891,7 +909,7 @@ app.delete('/api/recipes/saved/:recipeId', authenticateToken, async (req, res) =
 // ============================================
 // ENDPOINT: Traduci RecipeDetail completo dall'inglese all'italiano con DeepL
 // ============================================
-app.post('/api/recipes/translate-recipe-detail', async (req, res) => {
+app.post('/api/recipes/translate-recipe-detail', expensiveLimiter, async (req, res) => {
   try {
     const { recipe } = req.body;
 
@@ -972,7 +990,7 @@ app.post('/api/recipes/translate-recipe-detail', async (req, res) => {
 // ============================================
 // ENDPOINT: Traduci dati ricette dall'inglese all'italiano con DeepL
 // ============================================
-app.post('/api/recipes/translate-recipe-data', async (req, res) => {
+app.post('/api/recipes/translate-recipe-data', expensiveLimiter, async (req, res) => {
   try {
     const { recipes } = req.body;
 
@@ -1061,7 +1079,7 @@ app.post('/api/recipes/translate-recipe-data', async (req, res) => {
 // ============================================
 // ENDPOINT: Traduci ingredienti dall'italiano all'inglese con DeepL
 // ============================================
-app.post('/api/recipes/translate-ingredients', async (req, res) => {
+app.post('/api/recipes/translate-ingredients', expensiveLimiter, async (req, res) => {
   try {
     const { ingredients } = req.body;
 
@@ -1128,7 +1146,7 @@ app.post('/api/recipes/translate-ingredients', async (req, res) => {
 // ============================================
 // ENDPOINT: Traduci ricetta in italiano con DeepL
 // ============================================
-app.post('/api/recipes/translate', authenticateToken, async (req, res) => {
+app.post('/api/recipes/translate', expensiveLimiter, authenticateToken, async (req, res) => {
   try {
     const { recipeId } = req.body;
     const userId = req.user.id;

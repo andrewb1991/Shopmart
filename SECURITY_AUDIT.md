@@ -144,7 +144,10 @@ irrobustimenti dei flussi esistenti.
 | 0 | Rigenerazione `DEEPL_API_KEY` + env Railway | ☐ azione manuale |
 | 1 | C1 — verifica `idToken` Google | ✅ fatto e deployato (Railway) |
 | 1 | Login Google web via pulsante GIS (fallout C1) | ✅ fatto e deployato (Firebase) |
-| 1 | H2 — rate limiting | ⏳ in corso |
-| 1 | M1 — validazione input + policy password | ⏳ in corso |
-| 2 | H3/H4/M2/M3 | ☐ da fare |
-| 3 | Governance | ☐ da fare |
+| 1 | H2 — rate limiting | ✅ fatto e deployato |
+| 1 | M1 — validazione input + policy password | ✅ fatto e deployato |
+| 2 | H3 — rate limit endpoint costosi | ✅ fatto |
+| 2 | H4 — rimozione DEEPL_API_KEY dal client | ✅ fatto (rotazione chiave = manuale) |
+| 2 | M2 — helmet (security headers) | ✅ fatto |
+| 2 | M3 — no leak errori upstream al client | ✅ fatto |
+| 3 | Governance (npm audit, /api/auth/profile, CI) | ⏳ in corso |
