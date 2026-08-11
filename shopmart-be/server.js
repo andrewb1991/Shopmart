@@ -305,6 +305,43 @@ app.get('/api/auth/me', authenticateToken, async (req, res) => {
   } catch (err) { console.error('Errore recupero utente:', err); res.status(500).json({ error: 'Errore nel recupero dei dati utente' }); }
 });
 
+// Fix L2: aggiornamento profilo + cambio password. Il client lo chiamava
+// (PUT /api/auth/profile) ma l'endpoint non esisteva lato server.
+app.put('/api/auth/profile', authLimiter, authenticateToken, async (req, res) => {
+  try {
+    const { firstName, lastName, currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ error: 'Utente non trovato' });
+
+    if (typeof firstName === 'string') user.firstName = firstName.trim();
+    if (typeof lastName === 'string') user.lastName = lastName.trim();
+    if (typeof firstName === 'string' || typeof lastName === 'string') {
+      const dn = `${user.firstName || ''} ${user.lastName || ''}`.trim();
+      if (dn) user.displayName = dn;
+    }
+
+    // Cambio password opzionale (solo per account con password locale).
+    if (newPassword) {
+      if (!user.password) {
+        return res.status(400).json({ error: 'Account senza password locale (accesso Google)' });
+      }
+      if (typeof currentPassword !== 'string' || !(await user.comparePassword(currentPassword))) {
+        return res.status(401).json({ error: 'Password attuale errata' });
+      }
+      if (typeof newPassword !== 'string' || newPassword.length < 8) {
+        return res.status(400).json({ error: 'La nuova password deve avere almeno 8 caratteri' });
+      }
+      user.password = newPassword; // il pre-save hook la ri-hasha
+    }
+
+    await user.save();
+    res.json({ success: true, user: { id: user._id.toString(), email: user.email, firstName: user.firstName, lastName: user.lastName, displayName: user.displayName, photoUrl: user.photoUrl } });
+  } catch (err) {
+    console.error('Errore aggiornamento profilo:', err);
+    res.status(500).json({ error: 'Errore durante l\'aggiornamento del profilo' });
+  }
+});
+
 // ------------------ INVENTORY ------------------
 app.post('/api/inventory/add', authenticateToken, async (req, res) => {
   try {

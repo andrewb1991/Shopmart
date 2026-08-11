@@ -150,4 +150,6 @@ irrobustimenti dei flussi esistenti.
 | 2 | H4 — rimozione DEEPL_API_KEY dal client | ✅ fatto (rotazione chiave = manuale) |
 | 2 | M2 — helmet (security headers) | ✅ fatto |
 | 2 | M3 — no leak errori upstream al client | ✅ fatto |
-| 3 | Governance (npm audit, /api/auth/profile, CI) | ⏳ in corso |
+| 3 | `npm audit` backend → **0 vulnerabilità** (erano 9) | ✅ fatto |
+| 3 | Ripristino endpoint `/api/auth/profile` (L2) | ✅ fatto |
+| 3 | CI GitHub Actions (test + audit ad ogni push) | ✅ fatto |
